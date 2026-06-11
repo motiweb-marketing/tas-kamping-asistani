@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { addEntry, rowToFlatMenus } from '@/lib/menu-storage';
 import { getSession } from '@/lib/session';
 import { createServerClient } from '@/lib/supabase/server';
 import type { MenuEntryKind, MealPeriod } from '@/types';
@@ -15,14 +16,14 @@ export async function GET() {
     .select('*')
     .eq('campaign_id', session.user.campaign_id)
     .order('day')
-    .order('period')
-    .order('sort_order');
+    .order('meal_type');
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  return NextResponse.json({ menus: data });
+  const menus = (data || []).flatMap((row) => rowToFlatMenus(row));
+  return NextResponse.json({ menus });
 }
 
 export async function POST(request: NextRequest) {
@@ -36,14 +37,12 @@ export async function POST(request: NextRequest) {
     day,
     period,
     entry_kind,
-    description = '',
     camp_day_number,
     is_departure = false,
   } = body as {
     day: string;
     period: MealPeriod;
     entry_kind: MenuEntryKind;
-    description?: string;
     camp_day_number: number;
     is_departure?: boolean;
   };
@@ -52,33 +51,45 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Eksik alanlar' }, { status: 400 });
   }
 
+  const meal_type = period === 'breakfast' ? 'breakfast' : 'dinner';
   const supabase = createServerClient();
+  const campaignId = session.user.campaign_id;
 
   const { data: existing } = await supabase
     .from('menus')
-    .select('sort_order')
-    .eq('campaign_id', session.user.campaign_id)
+    .select('*')
+    .eq('campaign_id', campaignId)
     .eq('day', day)
-    .eq('period', period)
-    .order('sort_order', { ascending: false })
-    .limit(1);
+    .eq('meal_type', meal_type)
+    .maybeSingle();
 
-  const sort_order = (existing?.[0]?.sort_order ?? -1) + 1;
+  const meta = { camp_day_number, is_departure };
 
-  const meal_type = period === 'breakfast' ? 'breakfast' : 'dinner';
+  if (existing) {
+    const newDescription = addEntry(existing.description || '', entry_kind, meta);
+    const { data, error } = await supabase
+      .from('menus')
+      .update({ description: newDescription })
+      .eq('id', existing.id)
+      .select()
+      .single();
 
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+
+    const menus = rowToFlatMenus(data);
+    return NextResponse.json({ menu: menus[menus.length - 1] });
+  }
+
+  const description = addEntry('', entry_kind, meta);
   const { data, error } = await supabase
     .from('menus')
     .insert({
-      campaign_id: session.user.campaign_id,
+      campaign_id: campaignId,
       day,
       meal_type,
-      period,
-      entry_kind,
-      description: String(description).trim(),
-      camp_day_number,
-      is_departure,
-      sort_order,
+      description,
     })
     .select()
     .single();
@@ -87,5 +98,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  return NextResponse.json({ menu: data });
+  const menus = rowToFlatMenus(data);
+  return NextResponse.json({ menu: menus[menus.length - 1] });
 }

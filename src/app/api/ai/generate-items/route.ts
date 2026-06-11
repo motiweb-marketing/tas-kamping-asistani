@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { rowToFlatMenus } from '@/lib/menu-storage';
 import { getSession } from '@/lib/session';
 import { createServerClient } from '@/lib/supabase/server';
 import { buildSystemPrompt, callOpenRouter } from '@/lib/openrouter';
@@ -16,10 +17,7 @@ export async function POST() {
     supabase.from('campaigns').select('openrouter_api_key').eq('id', campaignId).single(),
     supabase.from('users').select('age').eq('campaign_id', campaignId),
     supabase.from('tents').select('id').eq('campaign_id', campaignId),
-    supabase
-      .from('menus')
-      .select('day, meal_type, period, entry_kind, description')
-      .eq('campaign_id', campaignId),
+    supabase.from('menus').select('*').eq('campaign_id', campaignId),
   ]);
 
   const apiKey = campaignRes.data?.openrouter_api_key;
@@ -32,7 +30,16 @@ export async function POST() {
 
   const users = usersRes.data || [];
   const tents = tentsRes.data || [];
-  const menus = (menusRes.data || []).filter((m) => m.description?.trim());
+  const flatMenus = (menusRes.data || []).flatMap((row) => rowToFlatMenus(row));
+  const menus = flatMenus
+    .filter((m) => m.description?.trim())
+    .map((m) => ({
+      day: m.day,
+      meal_type: m.meal_type,
+      period: m.period,
+      entry_kind: m.entry_kind,
+      description: m.description,
+    }));
 
   if (!menus.length) {
     return NextResponse.json({ error: 'Önce menü tariflerini girin' }, { status: 400 });

@@ -148,8 +148,8 @@ export default function CampSettingsPage() {
     return menus.filter(
       (m) =>
         m.day === slot.slot_date &&
-        (m.period === slot.period ||
-          (!m.period && m.meal_type === slot.period))
+        ((m as { period?: string }).period === slot.period ||
+          m.meal_type === slot.period)
     );
   }
 

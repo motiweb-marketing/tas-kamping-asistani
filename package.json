@@ -7,13 +7,15 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "db:seed": "npx tsx scripts/reset-and-seed.ts"
+    "db:seed": "npx tsx scripts/reset-and-seed.ts",
+    "db:migrate": "npx tsx scripts/apply-migrations.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.49.1",
     "bcryptjs": "^2.4.3",
     "iron-session": "^8.0.4",
     "next": "14.2.29",
+    "pg": "^8.21.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
   },

@@ -1,7 +1,14 @@
 -- Menü slotları: çoklu öğün girişi (kahvaltı / yemek / ara öğün)
 
-CREATE TYPE menu_entry_kind AS ENUM ('breakfast', 'meal', 'snack');
-CREATE TYPE meal_period AS ENUM ('breakfast', 'dinner');
+DO $$ BEGIN
+  CREATE TYPE menu_entry_kind AS ENUM ('breakfast', 'meal', 'snack');
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+DO $$ BEGIN
+  CREATE TYPE meal_period AS ENUM ('breakfast', 'dinner');
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
 ALTER TABLE menus
   ADD COLUMN IF NOT EXISTS camp_day_number INTEGER,
@@ -21,4 +28,7 @@ ALTER TABLE menus DROP CONSTRAINT IF EXISTS menus_campaign_id_day_meal_type_key;
 
 CREATE INDEX IF NOT EXISTS idx_menus_slot ON menus(campaign_id, day, period);
 
-ALTER PUBLICATION supabase_realtime ADD TABLE menus;
+DO $$ BEGIN
+  ALTER PUBLICATION supabase_realtime ADD TABLE menus;
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
