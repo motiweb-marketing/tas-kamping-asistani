@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { rowToFlatMenus } from '@/lib/menu-storage';
+import { dayMenuToFlat, rowsToDayMap } from '@/lib/menu-storage';
 import { getSession } from '@/lib/session';
 import { createServerClient } from '@/lib/supabase/server';
 import { buildSystemPrompt, callOpenRouter } from '@/lib/openrouter';
@@ -17,7 +17,7 @@ export async function POST() {
     supabase.from('campaigns').select('openrouter_api_key').eq('id', campaignId).single(),
     supabase.from('users').select('age').eq('campaign_id', campaignId),
     supabase.from('tents').select('id').eq('campaign_id', campaignId),
-    supabase.from('menus').select('*').eq('campaign_id', campaignId),
+    supabase.from('menus').select('id, day, meal_type, description').eq('campaign_id', campaignId),
   ]);
 
   const apiKey = campaignRes.data?.openrouter_api_key;
@@ -30,7 +30,10 @@ export async function POST() {
 
   const users = usersRes.data || [];
   const tents = tentsRes.data || [];
-  const flatMenus = (menusRes.data || []).flatMap((row) => rowToFlatMenus(row));
+  const dayMap = rowsToDayMap(menusRes.data || []);
+  const flatMenus = Array.from(dayMap.entries()).flatMap(([day, { content }]) =>
+    dayMenuToFlat(day, content)
+  );
   const menus = flatMenus
     .filter((m) => m.description?.trim())
     .map((m) => ({

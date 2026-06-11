@@ -2,13 +2,24 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
-import {
-  ENTRY_KIND_LABELS,
-  generateCampMealSlots,
-  slotKey,
-  type CampMealSlot,
-} from '@/lib/camp-slots';
-import type { CampaignSettings, Menu, MenuEntryKind } from '@/types';
+import { SECTION_LABELS } from '@/lib/camp-slots';
+import type { CampaignSettings } from '@/types';
+
+interface DayCard {
+  camp_day_number: number;
+  date: string;
+  title: string;
+  is_arrival: boolean;
+  is_departure: boolean;
+  show_breakfast: boolean;
+  show_meal: boolean;
+  show_snack: boolean;
+  breakfast: string;
+  meal: string;
+  snack: string;
+}
+
+type SectionKey = 'breakfast' | 'meal' | 'snack';
 
 export default function CampSettingsPage() {
   const [campaign, setCampaign] = useState<{
@@ -18,8 +29,7 @@ export default function CampSettingsPage() {
     end_date: string;
   } | null>(null);
   const [dates, setDates] = useState({ start_date: '', end_date: '' });
-  const [menus, setMenus] = useState<Menu[]>([]);
-  const [savedSlots, setSavedSlots] = useState<CampMealSlot[]>([]);
+  const [days, setDays] = useState<DayCard[]>([]);
   const [apiSettings, setApiSettings] = useState<CampaignSettings | null>(null);
   const [savingDates, setSavingDates] = useState(false);
   const [generating, setGenerating] = useState(false);
@@ -27,13 +37,13 @@ export default function CampSettingsPage() {
   const [error, setError] = useState('');
 
   const load = useCallback(async () => {
-    const [campRes, menusRes, settingsRes] = await Promise.all([
+    const [campRes, daysRes, settingsRes] = await Promise.all([
       fetch('/api/campaign', { cache: 'no-store' }),
-      fetch('/api/menus', { cache: 'no-store' }),
+      fetch('/api/menus/day', { cache: 'no-store' }),
       fetch('/api/admin/settings'),
     ]);
     const campData = await campRes.json();
-    const menusData = await menusRes.json();
+    const daysData = await daysRes.json();
     const settingsData = await settingsRes.json();
 
     if (campRes.ok && campData.campaign) {
@@ -42,14 +52,8 @@ export default function CampSettingsPage() {
         start_date: campData.campaign.start_date,
         end_date: campData.campaign.end_date,
       });
-      setSavedSlots(
-        generateCampMealSlots(
-          campData.campaign.start_date,
-          campData.campaign.end_date
-        )
-      );
     }
-    setMenus(menusData.menus || []);
+    setDays(daysData.days || []);
     if (settingsRes.ok) setApiSettings(settingsData);
   }, []);
 
@@ -79,51 +83,37 @@ export default function CampSettingsPage() {
     }
 
     setCampaign(data.campaign);
-    setSavedSlots(generateCampMealSlots(data.campaign.start_date, data.campaign.end_date));
     setMessage(
       `Kamp tarihleri güncellendi. Nöbet planı yenilendi (${data.duties_regenerated} slot).`
     );
     load();
   }
 
-  async function addEntry(
-    slot: CampMealSlot,
-    entry_kind: MenuEntryKind
-  ) {
+  async function saveDay(card: DayCard) {
     setError('');
-    const res = await fetch('/api/menus', {
-      method: 'POST',
+    const res = await fetch('/api/menus/day', {
+      method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        day: slot.slot_date,
-        period: slot.period,
-        entry_kind,
-        description: '',
-        camp_day_number: slot.camp_day_number,
-        is_departure: slot.is_departure,
-      }),
+      body: JSON.stringify(card),
     });
     if (!res.ok) {
       const data = await res.json();
-      setError(data.error || 'Eklenemedi');
-      return;
+      setError(data.error || 'Kaydedilemedi');
     }
-    load();
   }
 
-  async function saveDescription(id: string, description: string) {
-    await fetch(`/api/menus/${id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ description }),
+  function updateField(date: string, field: SectionKey, value: string) {
+    setDays((prev) =>
+      prev.map((d) => (d.date === date ? { ...d, [field]: value } : d))
+    );
+  }
+
+  function handleBlur(date: string) {
+    setDays((prev) => {
+      const card = prev.find((d) => d.date === date);
+      if (card) void saveDay(card);
+      return prev;
     });
-    load();
-  }
-
-  async function deleteEntry(id: string) {
-    if (!confirm('Bu öğün kaydını silmek istiyor musunuz?')) return;
-    await fetch(`/api/menus/${id}`, { method: 'DELETE' });
-    load();
   }
 
   async function generateList() {
@@ -139,27 +129,23 @@ export default function CampSettingsPage() {
     setMessage(`${data.count} malzeme oluşturuldu. Review ekranından kontrol edin.`);
   }
 
-  const slots =
-    dates.start_date && dates.end_date && dates.end_date >= dates.start_date
-      ? generateCampMealSlots(dates.start_date, dates.end_date)
-      : savedSlots;
+  const hasMenuContent = days.some(
+    (d) => d.breakfast.trim() || d.meal.trim() || d.snack.trim()
+  );
 
-  function entriesForSlot(slot: CampMealSlot) {
-    return menus.filter(
-      (m) =>
-        m.day === slot.slot_date &&
-        ((m as { period?: string }).period === slot.period ||
-          m.meal_type === slot.period)
-    );
-  }
+  const sections: { key: SectionKey; show: keyof DayCard; label: string }[] = [
+    { key: 'breakfast', show: 'show_breakfast', label: SECTION_LABELS.breakfast },
+    { key: 'meal', show: 'show_meal', label: SECTION_LABELS.meal },
+    { key: 'snack', show: 'show_snack', label: SECTION_LABELS.snack },
+  ];
 
   return (
     <div className="flex flex-col gap-6">
       <div>
         <h2 className="text-xl font-bold">Kamp Ayarları</h2>
         <p className="mt-1 text-base text-gray-600">
-          Varış günü akşam yemeğinden başlar, ayrılış günü sabah kahvaltısıyla biter.
-          Kaydettiğinizde tüm katılımcıların ekranı güncellenir.
+          Her gün için kahvaltı, akşam yemeği ve ara öğün planını girin. Varış gününde
+          yalnızca akşam, ayrılış gününde yalnızca kahvaltı vardır.
         </p>
       </div>
 
@@ -211,89 +197,44 @@ export default function CampSettingsPage() {
         </button>
       </form>
 
-      {slots.length === 0 ? (
-        <p className="text-gray-500">Geçerli kamp tarihi girin.</p>
+      {days.length === 0 ? (
+        <p className="text-gray-500">Geçerli kamp tarihi girin ve kaydedin.</p>
       ) : (
         <div className="grid gap-4 lg:grid-cols-2">
-          {slots.map((slot) => {
-            const entries = entriesForSlot(slot);
-            return (
-              <section
-                key={slotKey(slot.slot_date, slot.period)}
-                className={`rounded-xl border-2 p-4 ${
-                  slot.is_departure
-                    ? 'border-amber-300 bg-amber-50'
+          {days.map((card) => (
+            <section
+              key={card.date}
+              className={`rounded-xl border-2 p-4 ${
+                card.is_departure
+                  ? 'border-amber-300 bg-amber-50'
+                  : card.is_arrival
+                    ? 'border-blue-200 bg-blue-50'
                     : 'border-gray-200 bg-white'
-                }`}
-              >
-                <h3 className="text-lg font-semibold text-emerald-900">{slot.title}</h3>
-                <p className="text-sm text-gray-500">
-                  {slot.period === 'breakfast' ? '☀️ Sabah' : '🌙 Akşam'}
-                </p>
+              }`}
+            >
+              <h3 className="text-lg font-semibold text-emerald-900">{card.title}</h3>
 
-                <div className="mt-3 flex flex-col gap-3">
-                  {entries.length === 0 ? (
-                    <p className="text-sm text-gray-400">Henüz öğün eklenmedi.</p>
-                  ) : (
-                    entries.map((entry) => (
-                      <div
-                        key={entry.id}
-                        className="rounded-lg border border-gray-200 bg-gray-50 p-3"
-                      >
-                        <div className="mb-2 flex items-center justify-between gap-2">
-                          <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-sm font-medium text-emerald-800">
-                            {ENTRY_KIND_LABELS[entry.entry_kind || 'meal']}
-                          </span>
-                          <button
-                            type="button"
-                            onClick={() => deleteEntry(entry.id)}
-                            className="text-sm text-red-600 hover:underline"
-                          >
-                            Sil
-                          </button>
-                        </div>
-                        <textarea
-                          defaultValue={entry.description}
-                          placeholder="Tarif / menü açıklaması yazın..."
-                          rows={3}
-                          className="w-full rounded-lg border-2 px-3 py-2 text-base"
-                          onBlur={(e) => {
-                            if (e.target.value.trim() !== entry.description) {
-                              saveDescription(entry.id, e.target.value.trim());
-                            }
-                          }}
-                        />
-                      </div>
-                    ))
-                  )}
-                </div>
-
-                <div className="mt-3 flex flex-wrap gap-2">
-                  <button
-                    type="button"
-                    onClick={() => addEntry(slot, 'breakfast')}
-                    className="min-h-[40px] flex-1 rounded-lg bg-orange-100 px-3 text-sm font-medium text-orange-900 sm:flex-none"
-                  >
-                    + Kahvaltı Ekle
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => addEntry(slot, 'meal')}
-                    className="min-h-[40px] flex-1 rounded-lg bg-emerald-100 px-3 text-sm font-medium text-emerald-900 sm:flex-none"
-                  >
-                    + Yemek Ekle
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => addEntry(slot, 'snack')}
-                    className="min-h-[40px] flex-1 rounded-lg bg-blue-100 px-3 text-sm font-medium text-blue-900 sm:flex-none"
-                  >
-                    + Ara Öğün Ekle
-                  </button>
-                </div>
-              </section>
-            );
-          })}
+              <div className="mt-4 flex flex-col gap-4">
+                {sections.map(({ key, show, label }) =>
+                  card[show] ? (
+                    <div key={key}>
+                      <label className="mb-1 block text-sm font-semibold text-gray-700">
+                        {label}
+                      </label>
+                      <textarea
+                        value={card[key]}
+                        onChange={(e) => updateField(card.date, key, e.target.value)}
+                        onBlur={() => handleBlur(card.date)}
+                        placeholder={`${label} tarifi / menü...`}
+                        rows={3}
+                        className="w-full rounded-lg border-2 border-gray-200 px-3 py-2 text-base focus:border-emerald-500 focus:outline-none"
+                      />
+                    </div>
+                  ) : null
+                )}
+              </div>
+            </section>
+          ))}
         </div>
       )}
 
@@ -308,7 +249,7 @@ export default function CampSettingsPage() {
 
       <button
         onClick={generateList}
-        disabled={generating || menus.length === 0 || !apiSettings?.configured}
+        disabled={generating || !hasMenuContent || !apiSettings?.configured}
         className="min-h-[52px] rounded-xl bg-blue-600 text-lg font-semibold text-white disabled:opacity-50"
       >
         {generating ? 'AI Listesi Oluşturuluyor...' : 'Listeyi Oluştur (AI)'}

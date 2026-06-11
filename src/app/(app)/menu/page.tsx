@@ -1,38 +1,38 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import {
-  ENTRY_KIND_LABELS,
-  generateCampMealSlots,
-  slotKey,
-  type CampMealSlot,
-} from '@/lib/camp-slots';
-import type { Menu } from '@/types';
+import { SECTION_LABELS } from '@/lib/camp-slots';
+
+interface DayCard {
+  date: string;
+  title: string;
+  is_departure: boolean;
+  is_arrival: boolean;
+  show_breakfast: boolean;
+  show_meal: boolean;
+  show_snack: boolean;
+  breakfast: string;
+  meal: string;
+  snack: string;
+}
 
 export default function MenuPage() {
-  const [slots, setSlots] = useState<CampMealSlot[]>([]);
-  const [menus, setMenus] = useState<Menu[]>([]);
+  const [days, setDays] = useState<DayCard[]>([]);
   const [campaignName, setCampaignName] = useState('');
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
-    const [campRes, menusRes] = await Promise.all([
+    const [campRes, daysRes] = await Promise.all([
       fetch('/api/campaign', { cache: 'no-store' }),
-      fetch('/api/menus', { cache: 'no-store' }),
+      fetch('/api/menus/day', { cache: 'no-store' }),
     ]);
     const campData = await campRes.json();
-    const menusData = await menusRes.json();
+    const daysData = await daysRes.json();
 
     if (campRes.ok && campData.campaign) {
       setCampaignName(campData.campaign.name);
-      setSlots(
-        generateCampMealSlots(
-          campData.campaign.start_date,
-          campData.campaign.end_date
-        )
-      );
     }
-    setMenus(menusData.menus || []);
+    setDays(daysData.days || []);
     setLoading(false);
   }, []);
 
@@ -42,19 +42,13 @@ export default function MenuPage() {
     return () => clearInterval(interval);
   }, [load]);
 
-  function entriesForSlot(slot: CampMealSlot) {
-    return menus.filter(
-      (m) =>
-        m.day === slot.slot_date &&
-        ((m as { period?: string }).period === slot.period ||
-          m.meal_type === slot.period) &&
-        m.description?.trim()
-    );
-  }
-
   if (loading) {
     return <p className="text-lg text-gray-500">Yükleniyor...</p>;
   }
+
+  const hasContent = days.some(
+    (d) => d.breakfast.trim() || d.meal.trim() || d.snack.trim()
+  );
 
   return (
     <div className="flex flex-col gap-4">
@@ -65,37 +59,52 @@ export default function MenuPage() {
         )}
       </div>
 
-      {slots.length === 0 ? (
+      {days.length === 0 ? (
         <p className="rounded-xl bg-yellow-100 p-4 text-lg text-yellow-800">
           Admin henüz kamp tarihlerini ayarlamadı.
         </p>
+      ) : !hasContent ? (
+        <p className="text-lg text-gray-500">
+          Henüz menü girilmedi. Organizatör Kamp Ayarlarından ekleyecek.
+        </p>
       ) : (
         <div className="grid gap-4 lg:grid-cols-2">
-          {slots.map((slot) => {
-            const entries = entriesForSlot(slot);
-            if (entries.length === 0) return null;
+          {days.map((card) => {
+            const items = [
+              card.show_breakfast && card.breakfast.trim()
+                ? { label: SECTION_LABELS.breakfast, text: card.breakfast }
+                : null,
+              card.show_meal && card.meal.trim()
+                ? { label: SECTION_LABELS.meal, text: card.meal }
+                : null,
+              card.show_snack && card.snack.trim()
+                ? { label: SECTION_LABELS.snack, text: card.snack }
+                : null,
+            ].filter(Boolean) as { label: string; text: string }[];
+
+            if (items.length === 0) return null;
 
             return (
               <section
-                key={slotKey(slot.slot_date, slot.period)}
+                key={card.date}
                 className={`rounded-xl border-2 p-4 ${
-                  slot.is_departure
+                  card.is_departure
                     ? 'border-amber-300 bg-amber-50'
-                    : 'border-gray-200 bg-white'
+                    : card.is_arrival
+                      ? 'border-blue-200 bg-blue-50'
+                      : 'border-gray-200 bg-white'
                 }`}
               >
-                <h3 className="text-lg font-semibold text-emerald-900">{slot.title}</h3>
+                <h3 className="text-lg font-semibold text-emerald-900">{card.title}</h3>
                 <ul className="mt-3 flex flex-col gap-3">
-                  {entries.map((entry) => (
+                  {items.map((item) => (
                     <li
-                      key={entry.id}
+                      key={item.label}
                       className="rounded-lg border border-gray-100 bg-gray-50 p-3"
                     >
-                      <p className="text-sm font-medium text-emerald-700">
-                        {ENTRY_KIND_LABELS[entry.entry_kind || 'meal']}
-                      </p>
-                      <p className="mt-1 text-base text-gray-800 whitespace-pre-wrap">
-                        {entry.description}
+                      <p className="text-sm font-medium text-emerald-700">{item.label}</p>
+                      <p className="mt-1 whitespace-pre-wrap text-base text-gray-800">
+                        {item.text}
                       </p>
                     </li>
                   ))}
@@ -105,13 +114,6 @@ export default function MenuPage() {
           })}
         </div>
       )}
-
-      {slots.length > 0 &&
-        slots.every((s) => entriesForSlot(s).length === 0) && (
-          <p className="text-lg text-gray-500">
-            Henüz menü girilmedi. Organizatör Kamp Ayarlarından ekleyecek.
-          </p>
-        )}
     </div>
   );
 }

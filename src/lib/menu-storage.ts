@@ -1,150 +1,187 @@
 import type { MenuEntryKind, MealPeriod } from '@/types';
-import { randomUUID } from 'crypto';
 
-export interface MenuEntry {
-  id: string;
-  kind: MenuEntryKind;
-  text: string;
+export interface DayMenuContent {
+  breakfast: string;
+  meal: string;
+  snack: string;
 }
 
-interface MenuPayload {
+export interface DayMenuRecord {
+  row_id: string | null;
+  day: string;
+  camp_day_number: number;
+  is_arrival: boolean;
+  is_departure: boolean;
+  breakfast: string;
+  meal: string;
+  snack: string;
+}
+
+interface DayMenuPayloadV2 {
+  v: 2;
+  camp_day_number: number;
+  is_arrival: boolean;
+  is_departure: boolean;
+  breakfast: string;
+  meal: string;
+  snack: string;
+}
+
+interface MenuPayloadV1 {
   v: 1;
-  entries: MenuEntry[];
+  entries: { id: string; kind: MenuEntryKind; text: string }[];
   camp_day_number?: number;
   is_departure?: boolean;
 }
 
 export interface FlatMenuEntry {
-  id: string;
-  row_id: string;
-  campaign_id: string;
   day: string;
   meal_type: 'breakfast' | 'dinner';
   period: MealPeriod;
   entry_kind: MenuEntryKind;
   description: string;
-  camp_day_number: number;
-  is_departure: boolean;
-  sort_order: number;
-  created_at: string;
 }
 
-function parsePayload(description: string): MenuPayload | null {
+function emptyContent(): DayMenuContent {
+  return { breakfast: '', meal: '', snack: '' };
+}
+
+function parseV2(description: string): DayMenuPayloadV2 | null {
   try {
-    const parsed = JSON.parse(description) as MenuPayload;
-    if (parsed?.v === 1 && Array.isArray(parsed.entries)) return parsed;
+    const p = JSON.parse(description) as DayMenuPayloadV2;
+    if (p?.v === 2) return p;
   } catch {
-    /* legacy plain text */
+    /* */
   }
   return null;
 }
 
+function parseV1(description: string): MenuPayloadV1 | null {
+  try {
+    const p = JSON.parse(description) as MenuPayloadV1;
+    if (p?.v === 1 && Array.isArray(p.entries)) return p;
+  } catch {
+    /* */
+  }
+  return null;
+}
+
+function v1ToContent(description: string): DayMenuContent {
+  const payload = parseV1(description);
+  if (!payload) {
+    const text = description.trim();
+    return text ? { breakfast: '', meal: text, snack: '' } : emptyContent();
+  }
+  const c = emptyContent();
+  for (const e of payload.entries) {
+    const t = e.text.trim();
+    if (!t) continue;
+    if (e.kind === 'breakfast') c.breakfast = c.breakfast ? `${c.breakfast}\n${t}` : t;
+    else if (e.kind === 'snack') c.snack = c.snack ? `${c.snack}\n${t}` : t;
+    else c.meal = c.meal ? `${c.meal}\n${t}` : t;
+  }
+  return c;
+}
+
+export function serializeDayMenu(
+  content: DayMenuContent,
+  meta: { camp_day_number: number; is_arrival: boolean; is_departure: boolean }
+): string {
+  return JSON.stringify({
+    v: 2,
+    camp_day_number: meta.camp_day_number,
+    is_arrival: meta.is_arrival,
+    is_departure: meta.is_departure,
+    breakfast: content.breakfast.trim(),
+    meal: content.meal.trim(),
+    snack: content.snack.trim(),
+  } satisfies DayMenuPayloadV2);
+}
+
+export function parseRowContent(description: string): DayMenuContent {
+  const v2 = parseV2(description);
+  if (v2) {
+    return {
+      breakfast: v2.breakfast || '',
+      meal: v2.meal || '',
+      snack: v2.snack || '',
+    };
+  }
+  return v1ToContent(description);
+}
+
+export function rowsToDayMap(
+  rows: {
+    id: string;
+    day: string;
+    meal_type: 'breakfast' | 'dinner';
+    description: string;
+  }[]
+): Map<string, { row_id: string; content: DayMenuContent }> {
+  const map = new Map<string, { row_id: string; content: DayMenuContent }>();
+
+  for (const row of rows) {
+    const parsed = parseRowContent(row.description);
+    const existing = map.get(row.day);
+
+    if (!existing) {
+      map.set(row.day, { row_id: row.id, content: parsed });
+      continue;
+    }
+
+    const v2 = parseV2(row.description);
+    if (v2) {
+      map.set(row.day, { row_id: row.id, content: parsed });
+      continue;
+    }
+
+    existing.content = {
+      breakfast: [existing.content.breakfast, parsed.breakfast].filter(Boolean).join('\n'),
+      meal: [existing.content.meal, parsed.meal].filter(Boolean).join('\n'),
+      snack: [existing.content.snack, parsed.snack].filter(Boolean).join('\n'),
+    };
+  }
+
+  return map;
+}
+
+export function dayMenuToFlat(day: string, content: DayMenuContent): FlatMenuEntry[] {
+  const lines: FlatMenuEntry[] = [];
+  if (content.breakfast.trim()) {
+    lines.push({
+      day,
+      meal_type: 'breakfast',
+      period: 'breakfast',
+      entry_kind: 'breakfast',
+      description: content.breakfast.trim(),
+    });
+  }
+  if (content.meal.trim()) {
+    lines.push({
+      day,
+      meal_type: 'dinner',
+      period: 'dinner',
+      entry_kind: 'meal',
+      description: content.meal.trim(),
+    });
+  }
+  if (content.snack.trim()) {
+    lines.push({
+      day,
+      meal_type: 'dinner',
+      period: 'dinner',
+      entry_kind: 'snack',
+      description: content.snack.trim(),
+    });
+  }
+  return lines;
+}
+
+/** @deprecated AI uyumluluğu için */
 export function rowToFlatMenus(row: {
-  id: string;
-  campaign_id: string;
   day: string;
   meal_type: 'breakfast' | 'dinner';
   description: string;
-  created_at: string;
-  camp_day_number?: number | null;
-  period?: MealPeriod | null;
-  entry_kind?: MenuEntryKind | null;
-  is_departure?: boolean | null;
-  sort_order?: number | null;
 }): FlatMenuEntry[] {
-  const period = (row.period || row.meal_type) as MealPeriod;
-  const payload = parsePayload(row.description);
-
-  if (payload) {
-    return payload.entries.map((e, i) => ({
-      id: `${row.id}:${e.id}`,
-      row_id: row.id,
-      campaign_id: row.campaign_id,
-      day: row.day,
-      meal_type: row.meal_type,
-      period,
-      entry_kind: e.kind,
-      description: e.text,
-      camp_day_number: payload.camp_day_number ?? row.camp_day_number ?? 1,
-      is_departure: payload.is_departure ?? row.is_departure ?? false,
-      sort_order: row.sort_order ?? i,
-      created_at: row.created_at,
-    }));
-  }
-
-  if (!row.description?.trim() && !row.entry_kind) return [];
-
-  const kind =
-    row.entry_kind ||
-    (row.meal_type === 'breakfast' ? 'breakfast' : 'meal');
-
-  return [
-    {
-      id: `${row.id}:legacy`,
-      row_id: row.id,
-      campaign_id: row.campaign_id,
-      day: row.day,
-      meal_type: row.meal_type,
-      period,
-      entry_kind: kind as MenuEntryKind,
-      description: row.description,
-      camp_day_number: row.camp_day_number ?? 1,
-      is_departure: row.is_departure ?? false,
-      sort_order: row.sort_order ?? 0,
-      created_at: row.created_at,
-    },
-  ];
-}
-
-export function buildPayload(
-  entries: MenuEntry[],
-  meta: { camp_day_number: number; is_departure: boolean }
-): string {
-  return JSON.stringify({ v: 1, ...meta, entries } satisfies MenuPayload);
-}
-
-export function parseCompositeId(compositeId: string): { rowId: string; entryId: string } {
-  const idx = compositeId.indexOf(':');
-  if (idx === -1) return { rowId: compositeId, entryId: 'legacy' };
-  return { rowId: compositeId.slice(0, idx), entryId: compositeId.slice(idx + 1) };
-}
-
-export function addEntry(
-  description: string,
-  kind: MenuEntryKind,
-  meta: { camp_day_number: number; is_departure: boolean }
-): string {
-  let payload = parsePayload(description);
-
-  if (!payload) {
-    const legacyEntries: MenuEntry[] = description.trim()
-      ? [{ id: randomUUID(), kind: 'meal', text: description }]
-      : [];
-    payload = { v: 1, ...meta, entries: legacyEntries };
-  }
-
-  payload.camp_day_number = meta.camp_day_number;
-  payload.is_departure = meta.is_departure;
-  payload.entries.push({ id: randomUUID(), kind, text: '' });
-  return JSON.stringify(payload);
-}
-
-export function updateEntryText(
-  description: string,
-  entryId: string,
-  text: string
-): string | null {
-  const payload = parsePayload(description);
-  if (!payload) return null;
-  const entry = payload.entries.find((e) => e.id === entryId);
-  if (!entry) return null;
-  entry.text = text;
-  return JSON.stringify(payload);
-}
-
-export function removeEntry(description: string, entryId: string): string | null {
-  const payload = parsePayload(description);
-  if (!payload) return null;
-  payload.entries = payload.entries.filter((e) => e.id !== entryId);
-  return JSON.stringify(payload);
+  return dayMenuToFlat(row.day, parseRowContent(row.description));
 }

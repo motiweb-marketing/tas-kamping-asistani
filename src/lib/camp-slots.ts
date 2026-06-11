@@ -1,13 +1,3 @@
-import type { DutyPeriod } from '@/types';
-
-export interface CampMealSlot {
-  camp_day_number: number;
-  slot_date: string;
-  period: DutyPeriod;
-  title: string;
-  is_departure: boolean;
-}
-
 function parseDate(iso: string): Date {
   const [y, m, d] = iso.split('-').map(Number);
   return new Date(y, m - 1, d);
@@ -20,111 +10,109 @@ function formatDate(d: Date): string {
   return `${y}-${m}-${day}`;
 }
 
+function formatDateTr(iso: string): string {
+  const d = parseDate(iso);
+  return d.toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' });
+}
+
 function addDays(d: Date, n: number): Date {
   const r = new Date(d);
   r.setDate(r.getDate() + n);
   return r;
 }
 
-function slotTitle(
-  campDay: number,
-  period: DutyPeriod,
-  slotDate: string,
-  isDeparture: boolean
-): string {
-  const periodLabel = period === 'breakfast' ? 'Sabah Kahvaltısı' : 'Akşam Yemeği';
-  if (isDeparture) {
-    return `Ayrılış — ${slotDate} — ${periodLabel}`;
-  }
-  return `${campDay}. Gün — ${slotDate} — ${periodLabel}`;
+export interface CampDayCard {
+  camp_day_number: number;
+  date: string;
+  title: string;
+  is_arrival: boolean;
+  is_departure: boolean;
+  show_breakfast: boolean;
+  show_meal: boolean;
+  show_snack: boolean;
 }
 
 /**
- * Kamp öğün slotları (ör. 30-31-1-2):
- * - İlk gün: sadece akşam
- * - Ara günler: sabah + akşam
- * - Son gün: sadece sabah (ayrılış)
+ * Takvim günü başına bir kart (ör. 30-31-1-2):
+ * - İlk gün: sadece akşam yemeği
+ * - Ara günler: kahvaltı + yemek + ara öğün
+ * - Son gün: sadece sabah kahvaltısı (ayrılış)
  */
-export function generateCampMealSlots(startDate: string, endDate: string): CampMealSlot[] {
+export function generateCampDayCards(startDate: string, endDate: string): CampDayCard[] {
   const start = parseDate(startDate);
   const end = parseDate(endDate);
   if (end < start) return [];
 
-  const slots: CampMealSlot[] = [];
+  const cards: CampDayCard[] = [];
   let campDay = 1;
 
   for (let d = new Date(start); d <= end; d = addDays(d, 1)) {
     const dateStr = formatDate(d);
     const isFirst = dateStr === startDate;
     const isLast = dateStr === endDate;
+    const dateLabel = formatDateTr(dateStr);
 
     if (isFirst && isLast) {
-      slots.push({
+      cards.push({
         camp_day_number: 1,
-        slot_date: dateStr,
-        period: 'breakfast',
-        title: slotTitle(1, 'breakfast', dateStr, false),
-        is_departure: false,
-      });
-      slots.push({
-        camp_day_number: 1,
-        slot_date: dateStr,
-        period: 'dinner',
-        title: slotTitle(1, 'dinner', dateStr, false),
-        is_departure: false,
+        date: dateStr,
+        title: `1. Gün — ${dateLabel}`,
+        is_arrival: true,
+        is_departure: true,
+        show_breakfast: true,
+        show_meal: true,
+        show_snack: true,
       });
       continue;
     }
 
     if (isFirst) {
-      slots.push({
+      cards.push({
         camp_day_number: campDay,
-        slot_date: dateStr,
-        period: 'dinner',
-        title: slotTitle(campDay, 'dinner', dateStr, false),
+        date: dateStr,
+        title: `1. Gün — ${dateLabel} (Varış)`,
+        is_arrival: true,
         is_departure: false,
+        show_breakfast: false,
+        show_meal: true,
+        show_snack: false,
       });
       continue;
     }
 
     if (isLast) {
       campDay += 1;
-      slots.push({
+      cards.push({
         camp_day_number: campDay,
-        slot_date: dateStr,
-        period: 'breakfast',
-        title: slotTitle(campDay, 'breakfast', dateStr, true),
+        date: dateStr,
+        title: `Ayrılış — ${dateLabel}`,
+        is_arrival: false,
         is_departure: true,
+        show_breakfast: true,
+        show_meal: false,
+        show_snack: false,
       });
       continue;
     }
 
     campDay += 1;
-    slots.push({
+    cards.push({
       camp_day_number: campDay,
-      slot_date: dateStr,
-      period: 'breakfast',
-      title: slotTitle(campDay, 'breakfast', dateStr, false),
+      date: dateStr,
+      title: `${campDay}. Gün — ${dateLabel}`,
+      is_arrival: false,
       is_departure: false,
-    });
-    slots.push({
-      camp_day_number: campDay,
-      slot_date: dateStr,
-      period: 'dinner',
-      title: slotTitle(campDay, 'dinner', dateStr, false),
-      is_departure: false,
+      show_breakfast: true,
+      show_meal: true,
+      show_snack: true,
     });
   }
 
-  return slots;
+  return cards;
 }
 
-export function slotKey(slot_date: string, period: DutyPeriod): string {
-  return `${slot_date}:${period}`;
-}
-
-export const ENTRY_KIND_LABELS: Record<string, string> = {
+export const SECTION_LABELS = {
   breakfast: 'Kahvaltı',
-  meal: 'Yemek',
+  meal: 'Yemek (Akşam)',
   snack: 'Ara Öğün',
-};
+} as const;
