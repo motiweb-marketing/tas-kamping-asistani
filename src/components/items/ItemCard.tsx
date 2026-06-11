@@ -37,6 +37,9 @@ export default function ItemCard({
               <ExtraBadge name={item.added_by_user.name} />
             </div>
           )}
+          {item.notes?.trim() && (
+            <p className="mt-1 text-sm text-gray-600">{item.notes}</p>
+          )}
           {isAssigned && item.assigned_tent && (
             <p className="mt-1 text-base font-medium text-emerald-800">
               → {item.assigned_tent.name} getiriyor

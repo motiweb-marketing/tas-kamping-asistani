@@ -1,49 +1,41 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
+import { useLocalPatchList } from '@/hooks/use-local-patch-list';
 import type { Item, Tent } from '@/types';
 
 export default function ItemsReviewPage() {
-  const [items, setItems] = useState<Item[]>([]);
   const [tents, setTents] = useState<Tent[]>([]);
-  const [loading, setLoading] = useState(true);
   const [publishing, setPublishing] = useState(false);
 
-  async function load() {
-    const [itemsRes, tentsRes] = await Promise.all([
-      fetch('/api/items?published=false&scope=shared'),
-      fetch('/api/tents'),
-    ]);
-    const itemsData = await itemsRes.json();
-    const tentsData = await tentsRes.json();
-    setItems(itemsData.items || []);
-    setTents(tentsData.tents || []);
-    setLoading(false);
-  }
-
-  useEffect(() => {
-    load();
+  const loadItems = useCallback(async () => {
+    const res = await fetch('/api/items?published=false&scope=shared');
+    const data = await res.json();
+    return (data.items || []) as Item[];
   }, []);
 
-  async function updateItem(id: string, field: string, value: string | null) {
-    await fetch(`/api/items/${id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ [field]: value || null }),
-    });
-    load();
-  }
+  const { rows: items, loading, reload, setField, patch, remove } =
+    useLocalPatchList<Item>(loadItems);
+
+  const loadTents = useCallback(async () => {
+    const res = await fetch('/api/tents');
+    const data = await res.json();
+    setTents(data.tents || []);
+  }, []);
+
+  useEffect(() => {
+    loadTents();
+  }, [loadTents]);
 
   async function deleteItem(id: string) {
-    await fetch(`/api/items/${id}`, { method: 'DELETE' });
-    load();
+    await remove(id);
   }
 
   async function publishAll() {
     setPublishing(true);
     await fetch('/api/items/publish', { method: 'POST' });
     setPublishing(false);
-    load();
+    await reload();
   }
 
   if (loading) return <p className="text-lg">Yükleniyor...</p>;
@@ -74,50 +66,68 @@ export default function ItemsReviewPage() {
         <p className="text-lg text-gray-500">Taslak ortak malzeme yok.</p>
       ) : (
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-base">
+          <table className="w-full table-fixed text-left text-base">
             <thead>
               <tr className="border-b">
-                <th className="p-2">Ad</th>
-                <th className="p-2">Miktar</th>
-                <th className="p-2">Kategori</th>
-                <th className="p-2">Çadır (opsiyonel)</th>
-                <th className="p-2"></th>
+                <th className="w-[22%] p-2">Ad</th>
+                <th className="w-[10%] p-2">Miktar</th>
+                <th className="w-[12%] p-2">Kategori</th>
+                <th className="w-[24%] p-2">Not</th>
+                <th className="w-[18%] p-2">Çadır (opsiyonel)</th>
+                <th className="w-[8%] p-2"></th>
               </tr>
             </thead>
             <tbody>
               {items.map((item) => (
-                <tr key={item.id} className="border-b">
+                <tr key={item.id} className="border-b align-top">
                   <td className="p-2">
                     <input
-                      defaultValue={item.name}
-                      onBlur={(e) => updateItem(item.id, 'name', e.target.value)}
-                      className="w-full min-w-[140px] rounded border px-2 py-1"
+                      value={item.name}
+                      onChange={(e) => setField(item.id, { name: e.target.value })}
+                      onBlur={(e) => patch(item.id, { name: e.target.value })}
+                      className="w-full rounded border px-2 py-1"
                     />
                   </td>
                   <td className="p-2">
                     <input
-                      defaultValue={item.quantity}
-                      onBlur={(e) => updateItem(item.id, 'quantity', e.target.value)}
-                      className="w-24 rounded border px-2 py-1"
+                      value={item.quantity}
+                      onChange={(e) => setField(item.id, { quantity: e.target.value })}
+                      onBlur={(e) => patch(item.id, { quantity: e.target.value })}
+                      className="w-full rounded border px-2 py-1"
                     />
                   </td>
                   <td className="p-2">
                     <select
-                      defaultValue={item.category}
-                      onChange={(e) => updateItem(item.id, 'category', e.target.value)}
-                      className="rounded border px-2 py-1"
+                      value={item.category}
+                      onChange={(e) =>
+                        patch(item.id, {
+                          category: e.target.value as Item['category'],
+                        })
+                      }
+                      className="w-full rounded border px-2 py-1"
                     >
                       <option value="food">Yiyecek</option>
                       <option value="equipment">Ekipman</option>
                     </select>
                   </td>
                   <td className="p-2">
+                    <input
+                      value={item.notes || ''}
+                      onChange={(e) => setField(item.id, { notes: e.target.value })}
+                      onBlur={(e) => patch(item.id, { notes: e.target.value })}
+                      placeholder="Örn: organik tercih"
+                      className="w-full rounded border px-2 py-1"
+                    />
+                  </td>
+                  <td className="p-2">
                     <select
-                      defaultValue={item.assigned_tent_id || ''}
+                      value={item.assigned_tent_id || ''}
                       onChange={(e) =>
-                        updateItem(item.id, 'assigned_tent_id', e.target.value || null)
+                        patch(item.id, {
+                          assigned_tent_id: e.target.value || null,
+                        })
                       }
-                      className="max-w-[160px] rounded border px-2 py-1"
+                      className="w-full rounded border px-2 py-1"
                     >
                       <option value="">— Üstlenilmedi —</option>
                       {tents.map((t) => (
@@ -129,6 +139,7 @@ export default function ItemsReviewPage() {
                   </td>
                   <td className="p-2">
                     <button
+                      type="button"
                       onClick={() => deleteItem(item.id)}
                       className="rounded bg-red-100 px-3 py-1 text-red-700"
                     >

@@ -38,17 +38,34 @@ export default function AdminDutiesPage() {
   }
 
   async function assignDuty(dutyId: string, tentId: string) {
+    const tent = tents.find((t) => t.id === tentId);
     const tentUsers = users.filter((u) => u.tent_id === tentId);
-    await fetch(`/api/duties/${dutyId}`, {
+    const user = tentUsers[0];
+
+    setDuties((prev) =>
+      prev.map((d) =>
+        d.id === dutyId
+          ? {
+              ...d,
+              assigned_tent_id: tentId,
+              assigned_user_id: user?.id || null,
+              assigned_tent: tent ? { id: tent.id, name: tent.name } : null,
+              assigned_user: user ? { id: user.id, name: user.name, role: user.role } : null,
+            }
+          : d
+      )
+    );
+
+    const res = await fetch(`/api/duties/${dutyId}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         action: 'admin_assign',
         tent_id: tentId,
-        user_id: tentUsers[0]?.id || null,
+        user_id: user?.id || null,
       }),
     });
-    load();
+    if (!res.ok) load();
   }
 
   return (
@@ -76,7 +93,7 @@ export default function AdminDutiesPage() {
           ) : (
             <select
               className="mt-2 w-full rounded-lg border-2 px-3 py-2 text-lg"
-              defaultValue=""
+              value=""
               onChange={(e) => {
                 if (e.target.value) assignDuty(d.id, e.target.value);
               }}
