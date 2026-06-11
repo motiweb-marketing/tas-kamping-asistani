@@ -9,7 +9,7 @@ export default function ItemsReviewPage() {
   const [publishing, setPublishing] = useState(false);
 
   const loadItems = useCallback(async () => {
-    const res = await fetch('/api/items?published=false&scope=shared');
+    const res = await fetch('/api/items?published=false&scope=shared&exclude_standard=true');
     const data = await res.json();
     return (data.items || []) as Item[];
   }, []);

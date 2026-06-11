@@ -1,8 +1,9 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import ChecklistItemCard from '@/components/items/ChecklistItemCard';
-import ItemCard from '@/components/items/ItemCard';
+import SharedItemCard from '@/components/items/SharedItemCard';
 import type { ItemWithRelations, SessionUser } from '@/types';
 
 export default function MyTentPage() {
@@ -11,6 +12,15 @@ export default function MyTentPage() {
   const [user, setUser] = useState<SessionUser | null>(null);
   const [loading, setLoading] = useState(true);
 
+  async function loadShared(tentId: string) {
+    const res = await fetch('/api/items?scope=shared');
+    const data = await res.json();
+    const mine = (data.items || []).filter(
+      (i: ItemWithRelations) => (i.my_claim || 0) > 0
+    );
+    setSharedItems(mine);
+  }
+
   useEffect(() => {
     async function load() {
       const meRes = await fetch('/api/auth/me');
@@ -18,13 +28,9 @@ export default function MyTentPage() {
       setUser(meData.user);
 
       if (meData.user?.tent_id) {
-        const [sharedRes, tentRes] = await Promise.all([
-          fetch(`/api/items?scope=shared&tent_id=${meData.user.tent_id}`),
-          fetch('/api/items?scope=tent&recommendations=true'),
-        ]);
-        const sharedData = await sharedRes.json();
+        await loadShared(meData.user.tent_id);
+        const tentRes = await fetch('/api/items?scope=tent&recommendations=true');
         const tentData = await tentRes.json();
-        setSharedItems(sharedData.items || []);
         setTentItems(tentData.items || []);
       }
       setLoading(false);
@@ -38,7 +44,7 @@ export default function MyTentPage() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ item_id: itemId, checked }),
     });
-    if (res.ok && user?.tent_id) {
+    if (res.ok) {
       const tentRes = await fetch('/api/items?scope=tent&recommendations=true');
       const tentData = await tentRes.json();
       setTentItems(tentData.items || []);
@@ -59,32 +65,42 @@ export default function MyTentPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <h2 className="text-xl font-bold">Çadırımız</h2>
-        <p className="text-lg text-gray-600">
-          Ortak alışverişten üstlendiğimiz malzemeler ve çadır ekipmanı kontrol listesi.
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-xl font-bold">Çadırımız</h2>
+          <p className="text-gray-600">Üstlendiğimiz ortak malzemeler ve çadır ekipmanı.</p>
+        </div>
+        <Link href="/summary" className="text-sm font-semibold text-emerald-700 underline">
+          Kamp özeti
+        </Link>
       </div>
 
       <section>
         <h3 className="mb-2 text-lg font-semibold text-emerald-800">
-          Ortak Alışverişten Getireceklerimiz ({sharedItems.length})
+          Ortak Alışverişten Üstlendiklerimiz ({sharedItems.length})
         </h3>
         {sharedItems.length === 0 ? (
-          <p className="text-gray-500">Henüz ortak listeden malzeme üstlenilmedi.</p>
+          <p className="text-gray-500">
+            Henüz ortak listeden malzeme üstlenilmedi.{' '}
+            <Link href="/items" className="text-emerald-700 underline">
+              Listeye git
+            </Link>
+          </p>
         ) : (
           <div className="flex flex-col gap-3">
             {sharedItems.map((item) => (
-              <ItemCard key={item.id} item={item} showAssignButton={false} />
+              <SharedItemCard
+                key={item.id}
+                item={item}
+                onUpdated={() => user.tent_id && loadShared(user.tent_id)}
+              />
             ))}
           </div>
         )}
       </section>
 
       <section>
-        <h3 className="mb-2 text-lg font-semibold text-blue-800">
-          Çadır Ekipmanı Kontrol Listesi
-        </h3>
+        <h3 className="mb-2 text-lg font-semibold text-blue-800">Çadır Ekipmanı</h3>
         <div className="flex flex-col gap-3">
           {tentItems.map((item) => (
             <ChecklistItemCard

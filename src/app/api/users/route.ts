@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { hashPassword } from '@/lib/auth';
 import { formatPersonName } from '@/lib/format';
+import { syncStandardSharedItems } from '@/lib/sync-standard-items';
 import { getSession } from '@/lib/session';
 import { createServerClient } from '@/lib/supabase/server';
 
@@ -56,6 +57,12 @@ export async function POST(request: NextRequest) {
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  try {
+    await syncStandardSharedItems(supabase, session.user.campaign_id);
+  } catch {
+    /* ignore */
   }
 
   return NextResponse.json({ user: data });

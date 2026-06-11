@@ -43,11 +43,12 @@ ${menuText}
 
 Bu menüye ve kişi sayısına göre ORTAK KAMP ALIŞVERİŞ listesi çıkar.
 
-ÖNEMLİ — listeye DAHİL ETME (bunlar kişisel veya çadır listesinde):
-- Deniz ayakkabısı, güneş kremi, şapka, mayo, kişisel ilaçlar
-- Çoklu priz, çadır ışığı, sinek spreyi, uyku tulumu (çadır ekipmanı)
+ÖNEMLİ — listeye KESİNLİKLE DAHİL ETME (bunlar sistemde zaten var):
+- Tabak, bardak, çay bardağı, çatal, kaşık, bıçak, peçete (standart liste)
+- Deniz ayakkabısı, güneş kremi, şapka, mayo, kişisel ilaçlar (kişisel liste)
+- Çoklu priz, çadır ışığı, sinek spreyi, uyku tulumu (çadır listesi)
 
-Sadece grubun birlikte alıp paylaşacağı malzemeleri ekle:
+Sadece menüye özel yiyecek ve tüketimlik ortak malzemeleri ekle:
 - Menüdeki tüm yiyecek ve içecek malzemeleri (category: food)
 - Ortak kullanım ekipmanı: büyük kamp buzluğu/termos, mangal kömürü/odun, ortak pişirme tencere/tava, tabak-bardak seti (kişi sayısına göre), çöp poşeti, bulaşık süngeri/deterjan (category: equipment)
 

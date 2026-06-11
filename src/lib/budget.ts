@@ -1,5 +1,5 @@
 import type { BudgetSummary, BudgetTentBalance, SafeUser, Tent } from '@/types';
-import type { Item } from '@/types/database';
+import type { CampExpense, Item } from '@/types/database';
 
 const CHILD_AGE_THRESHOLD = 15;
 const CHILD_SHARE = 0.5;
@@ -13,12 +13,22 @@ export function calculateBudget(
   campaign: { id: string; name: string },
   users: SafeUser[],
   tents: Tent[],
-  items: Item[]
+  items: Item[],
+  expenses: CampExpense[] = []
 ): BudgetSummary {
-  const publishedItems = items.filter(
-    (item) => item.is_published && (item.list_scope === 'shared' || !item.list_scope)
+  const sharedPublished = items.filter(
+    (item) =>
+      item.is_published &&
+      item.list_scope === 'shared' &&
+      !item.is_recommendation
   );
-  const totalCost = publishedItems.reduce((sum, item) => sum + Number(item.price ?? 0), 0);
+
+  const expenseTotal = expenses.reduce((sum, e) => sum + Number(e.amount ?? 0), 0);
+  const itemPriceTotal = sharedPublished.reduce(
+    (sum, item) => sum + Number(item.price ?? 0),
+    0
+  );
+  const totalCost = expenseTotal > 0 ? expenseTotal : itemPriceTotal;
 
   const adultCount = users.filter((u) => u.age >= CHILD_AGE_THRESHOLD).length;
   const childCount = users.filter((u) => u.age < CHILD_AGE_THRESHOLD).length;
@@ -30,14 +40,18 @@ export function calculateBudget(
     const tentShares = members.reduce((sum, u) => sum + getUserShare(u.age), 0);
     const expectedContribution = tentShares * costPerShare;
 
-    const actualSpent = publishedItems
-      .filter(
-        (item) =>
-          item.assigned_tent_id === tent.id &&
-          (item.list_scope === 'shared' || !item.list_scope)
-      )
-      .reduce((sum, item) => sum + Number(item.price ?? 0), 0);
+    const tentExpenses = expenses
+      .filter((e) => e.tent_id === tent.id)
+      .reduce((sum, e) => sum + Number(e.amount ?? 0), 0);
 
+    const tentItemPrices =
+      expenseTotal > 0
+        ? 0
+        : sharedPublished
+            .filter((item) => item.assigned_tent_id === tent.id)
+            .reduce((sum, item) => sum + Number(item.price ?? 0), 0);
+
+    const actualSpent = tentExpenses > 0 ? tentExpenses : tentItemPrices;
     const balance = actualSpent - expectedContribution;
 
     let status: BudgetTentBalance['status'] = 'denk';

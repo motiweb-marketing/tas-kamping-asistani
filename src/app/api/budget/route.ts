@@ -12,7 +12,7 @@ export async function GET() {
   const campaignId = session.user.campaign_id;
   const supabase = createServerClient();
 
-  const [campaignRes, usersRes, tentsRes, itemsRes] = await Promise.all([
+  const [campaignRes, usersRes, tentsRes, itemsRes, expensesRes] = await Promise.all([
     supabase.from('campaigns').select('id, name').eq('id', campaignId).single(),
     supabase
       .from('users')
@@ -20,6 +20,7 @@ export async function GET() {
       .eq('campaign_id', campaignId),
     supabase.from('tents').select('*').eq('campaign_id', campaignId),
     supabase.from('items').select('*').eq('campaign_id', campaignId),
+    supabase.from('camp_expenses').select('*').eq('campaign_id', campaignId),
   ]);
 
   if (!campaignRes.data) {
@@ -30,7 +31,8 @@ export async function GET() {
     campaignRes.data,
     usersRes.data || [],
     tentsRes.data || [],
-    itemsRes.data || []
+    itemsRes.data || [],
+    expensesRes.data || []
   );
 
   return NextResponse.json({ budget: summary });

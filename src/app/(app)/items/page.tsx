@@ -1,8 +1,9 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import Link from 'next/link';
 import ChecklistItemCard from '@/components/items/ChecklistItemCard';
-import ItemCard from '@/components/items/ItemCard';
+import SharedItemCard from '@/components/items/SharedItemCard';
 import type { ItemCategory, ItemListScope, ItemWithRelations } from '@/types';
 
 type Tab = ItemListScope;
@@ -11,24 +12,23 @@ const TABS: { id: Tab; label: string; hint: string }[] = [
   {
     id: 'personal',
     label: 'Kişisel',
-    hint: 'Kendiniz için getirmeniz gerekenler — herkes kendi listesini işaretler.',
+    hint: 'Kendiniz için getirmeniz gerekenler.',
   },
   {
     id: 'tent',
     label: 'Çadırımız',
-    hint: 'Çadırınızın (ailenizin) bulundurması gereken ekipman.',
+    hint: 'Çadırınızın bulundurması gereken ekipman.',
   },
   {
     id: 'shared',
-    label: 'Ortak Alışveriş',
-    hint: 'Kamp ekibinin birlikte alacağı malzemeler — çadırınız üstlenebilir.',
+    label: 'Ortak',
+    hint: 'Birlikte alınan malzemeler — adet seçerek üstlenin.',
   },
 ];
 
 export default function ItemsPage() {
-  const [tab, setTab] = useState<Tab>('personal');
+  const [tab, setTab] = useState<Tab>('shared');
   const [items, setItems] = useState<ItemWithRelations[]>([]);
-  const [myTentId, setMyTentId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [showAdd, setShowAdd] = useState(false);
   const [newItem, setNewItem] = useState<{ name: string; quantity: string; category: ItemCategory }>({
@@ -38,6 +38,7 @@ export default function ItemsPage() {
   });
 
   const loadItems = useCallback(async (scope: Tab) => {
+    setLoading(true);
     const extra = scope !== 'shared' ? '&recommendations=true' : '';
     const res = await fetch(`/api/items?scope=${scope}${extra}`);
     const data = await res.json();
@@ -46,23 +47,8 @@ export default function ItemsPage() {
   }, []);
 
   useEffect(() => {
-    async function init() {
-      const meRes = await fetch('/api/auth/me');
-      const meData = await meRes.json();
-      setMyTentId(meData.user?.tent_id ?? null);
-      await loadItems(tab);
-    }
-    init();
+    loadItems(tab);
   }, [tab, loadItems]);
-
-  async function handleAssign(itemId: string) {
-    const res = await fetch('/api/items/assign', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ item_id: itemId }),
-    });
-    if (res.ok) loadItems(tab);
-  }
 
   async function handleCheck(itemId: string, checked: boolean) {
     const res = await fetch('/api/items/check', {
@@ -88,18 +74,22 @@ export default function ItemsPage() {
   }
 
   const activeTab = TABS.find((t) => t.id === tab)!;
-
-  const sharedMine = items.filter((i) => i.assigned_tent_id === myTentId);
-  const sharedOpen = items.filter((i) => !i.assigned_tent_id);
-  const sharedOthers = items.filter(
-    (i) => i.assigned_tent_id && i.assigned_tent_id !== myTentId
-  );
+  const standardItems = items.filter((i) => i.is_standard);
+  const foodItems = items.filter((i) => !i.is_standard);
 
   return (
     <div className="flex flex-col gap-4">
-      <div>
-        <h2 className="text-xl font-bold">Kamp Listeleri</h2>
-        <p className="mt-1 text-sm text-gray-600">{activeTab.hint}</p>
+      <div className="flex items-start justify-between gap-2">
+        <div>
+          <h2 className="text-xl font-bold">Kamp Listeleri</h2>
+          <p className="mt-1 text-sm text-gray-600">{activeTab.hint}</p>
+        </div>
+        <Link
+          href="/summary"
+          className="shrink-0 rounded-lg bg-gray-100 px-3 py-2 text-sm font-semibold text-emerald-800"
+        >
+          Özet
+        </Link>
       </div>
 
       <div className="flex gap-2 overflow-x-auto pb-1">
@@ -107,14 +97,9 @@ export default function ItemsPage() {
           <button
             key={t.id}
             type="button"
-            onClick={() => {
-              setLoading(true);
-              setTab(t.id);
-            }}
+            onClick={() => setTab(t.id)}
             className={`shrink-0 rounded-xl px-4 py-2 text-sm font-semibold ${
-              tab === t.id
-                ? 'bg-emerald-600 text-white'
-                : 'bg-gray-100 text-gray-700'
+              tab === t.id ? 'bg-emerald-600 text-white' : 'bg-gray-100 text-gray-700'
             }`}
           >
             {t.label}
@@ -123,12 +108,12 @@ export default function ItemsPage() {
       </div>
 
       {tab === 'shared' && (
-        <div className="flex items-center justify-end">
+        <div className="flex justify-end">
           <button
             onClick={() => setShowAdd(!showAdd)}
             className="min-h-[44px] rounded-xl bg-blue-600 px-4 text-base font-semibold text-white"
           >
-            + Ortak Listeye Ekle
+            + Ekstra Ekle
           </button>
         </div>
       )}
@@ -166,64 +151,51 @@ export default function ItemsPage() {
         <p className="text-lg text-gray-500">Yükleniyor...</p>
       ) : items.length === 0 ? (
         <p className="text-lg text-gray-500">
-          {tab === 'shared'
-            ? 'Henüz ortak alışveriş listesi yayınlanmadı.'
-            : 'Liste henüz hazırlanmadı.'}
+          {tab === 'shared' ? 'Henüz ortak liste yok.' : 'Liste henüz hazırlanmadı.'}
         </p>
-      ) : tab === 'personal' ? (
+      ) : tab === 'personal' || tab === 'tent' ? (
         items.map((item) => (
           <ChecklistItemCard
             key={item.id}
             item={item}
-            checked={!!item.checked}
-            onToggle={handleCheck}
-          />
-        ))
-      ) : tab === 'tent' ? (
-        items.map((item) => (
-          <ChecklistItemCard
-            key={item.id}
-            item={item}
-            checked={!!item.tent_checked}
+            checked={tab === 'personal' ? !!item.checked : !!item.tent_checked}
             onToggle={handleCheck}
           />
         ))
       ) : (
         <div className="flex flex-col gap-6">
-          {sharedMine.length > 0 && (
+          {standardItems.length > 0 && (
             <section>
-              <h3 className="mb-2 text-lg font-semibold text-emerald-800">
-                Çadırımızın Getirecekleri
+              <h3 className="mb-1 text-lg font-semibold text-emerald-800">
+                Standart Malzemeler
               </h3>
+              <p className="mb-3 text-sm text-gray-600">
+                Kişi sayısına göre otomatik hesaplanır. Adet seçerek üstlenin — hepsini tek çadır getirmek zorunda değil.
+              </p>
               <div className="flex flex-col gap-3">
-                {sharedMine.map((item) => (
-                  <ItemCard key={item.id} item={item} showAssignButton={false} />
+                {standardItems.map((item) => (
+                  <SharedItemCard
+                    key={item.id}
+                    item={item}
+                    onUpdated={() => loadItems('shared')}
+                  />
                 ))}
               </div>
             </section>
           )}
 
-          {sharedOpen.length > 0 && (
+          {foodItems.length > 0 && (
             <section>
-              <h3 className="mb-2 text-lg font-semibold text-amber-800">
-                Üstlenilebilir Malzemeler
+              <h3 className="mb-3 text-lg font-semibold text-amber-800">
+                Yemek & Diğer Ortak Alışveriş
               </h3>
               <div className="flex flex-col gap-3">
-                {sharedOpen.map((item) => (
-                  <ItemCard key={item.id} item={item} onAssign={handleAssign} />
-                ))}
-              </div>
-            </section>
-          )}
-
-          {sharedOthers.length > 0 && (
-            <section>
-              <h3 className="mb-2 text-lg font-semibold text-gray-600">
-                Diğer Çadırların Getirecekleri
-              </h3>
-              <div className="flex flex-col gap-3">
-                {sharedOthers.map((item) => (
-                  <ItemCard key={item.id} item={item} showAssignButton={false} />
+                {foodItems.map((item) => (
+                  <SharedItemCard
+                    key={item.id}
+                    item={item}
+                    onUpdated={() => loadItems('shared')}
+                  />
                 ))}
               </div>
             </section>

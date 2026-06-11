@@ -8,6 +8,7 @@ import { createClient } from '@supabase/supabase-js';
 import { hashPassword } from '../src/lib/auth';
 import { generateCampDutyPlan } from '../src/lib/camp-plan';
 import { ensureCampaignRecommendations } from '../src/lib/recommendations';
+import { syncStandardSharedItems } from '../src/lib/sync-standard-items';
 
 function loadEnv() {
   const envPath = resolve(process.cwd(), '.env.local');
@@ -158,6 +159,10 @@ async function main() {
     const { seeded } = await ensureCampaignRecommendations(supabase, campaign.id);
     if (seeded > 0) {
       console.log(`  ${seeded} önerilen liste maddesi eklendi`);
+    }
+    const { updated } = await syncStandardSharedItems(supabase, campaign.id);
+    if (updated > 0) {
+      console.log(`  ${updated} standart ortak malzeme eklendi/güncellendi`);
     }
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);

@@ -1,9 +1,11 @@
 import type {
   CampDuty,
+  CampExpense,
   Campaign,
   ChatMessage,
   Item,
   ItemCategory,
+  ItemDisposition,
   ItemListScope,
   MealType,
   SafeUser,
@@ -22,14 +24,44 @@ export interface SessionUser {
   username: string;
 }
 
+export interface ItemClaimWithTent {
+  id: string;
+  item_id: string;
+  tent_id: string;
+  quantity: number;
+  tent?: Pick<Tent, 'id' | 'name'> | null;
+}
+
 /** Ana listede gösterilen zenginleştirilmiş item */
 export interface ItemWithRelations extends Item {
   added_by_user?: Pick<SafeUser, 'id' | 'name'> | null;
   assigned_tent?: Pick<Tent, 'id' | 'name'> | null;
+  claims?: ItemClaimWithTent[];
+  claimed_total?: number;
+  remaining_count?: number;
+  my_claim?: number;
   /** Kişisel listede: kullanıcı işaretledi mi */
   checked?: boolean;
   /** Çadır listesinde: çadırda biri işaretledi mi */
   tent_checked?: boolean;
+}
+
+export interface CampExpenseWithRelations extends CampExpense {
+  tent?: Pick<Tent, 'id' | 'name'> | null;
+  item?: Pick<Item, 'id' | 'name'> | null;
+  created_by_user?: Pick<SafeUser, 'id' | 'name'> | null;
+}
+
+export interface SummaryClaimLine {
+  item_id: string;
+  item_name: string;
+  needed_count: number;
+  unit_label: string;
+  disposition: ItemDisposition;
+  is_standard: boolean;
+  claims: { tent_id: string; tent_name: string; quantity: number }[];
+  claimed_total: number;
+  remaining: number;
 }
 
 /** Chat balonlarında gösterilen mesaj */
