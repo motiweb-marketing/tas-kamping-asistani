@@ -1,9 +1,10 @@
-# Taş Kamping Asistanı — GitHub push + Vercel deploy tetikleyici
-# Kullanım: .\scripts\push.ps1
-#          .\scripts\push.ps1 -Message "feat: yeni özellik"
+# Taş Kamping Asistanı — GitHub push + Vercel prod deploy (otomatik yeniden dene)
+# Kullanım: .\push.ps1
+#           .\push.ps1 -Message "feat: aciklama"
 
 param(
-    [string]$Message = "chore: proje güncellemesi"
+    [string]$Message = "chore: proje guncellemesi",
+    [int]$MaxRetries = 3
 )
 
 $ErrorActionPreference = "Stop"
@@ -16,60 +17,133 @@ if (Test-Path $ConfigFile) {
     Get-Content $ConfigFile | ForEach-Object {
         $line = $_.Trim()
         if ($line -and -not $line.StartsWith("#") -and $line -match "^([^=]+)=(.*)$") {
-            $key = $matches[1].Trim()
-            $val = $matches[2].Trim()
-            Set-Item -Path "env:$key" -Value $val
+            Set-Item -Path "env:$($matches[1].Trim())" -Value $matches[2].Trim()
         }
     }
 }
 
 $GitEmail = if ($env:GIT_USER_EMAIL) { $env:GIT_USER_EMAIL } else { "seo.okacar@gmail.com" }
 $GitName  = if ($env:GIT_USER_NAME)  { $env:GIT_USER_NAME }  else { "motiweb-marketing" }
-$Token    = $env:GITHUB_TOKEN
 $Remote   = "https://github.com/motiweb-marketing/tas-kamping-asistani.git"
 $Branch   = "main"
 
-if (-not $Token) {
+function Write-Step($text) {
+    Write-Host $text -ForegroundColor Cyan
+}
+
+function Invoke-WithRetry {
+    param(
+        [string]$Label,
+        [scriptblock]$Action,
+        [scriptblock]$OnFailure
+    )
+
+    for ($i = 1; $i -le $MaxRetries; $i++) {
+        try {
+            Write-Step "$Label (deneme $i/$MaxRetries)..."
+            & $Action
+            if ($LASTEXITCODE -ne 0 -and $null -ne $LASTEXITCODE) {
+                throw "Cikis kodu: $LASTEXITCODE"
+            }
+            return $true
+        } catch {
+            Write-Host "  HATA: $_" -ForegroundColor Red
+            if ($i -lt $MaxRetries -and $OnFailure) {
+                Write-Host "  Duzeltme deneniyor..." -ForegroundColor Yellow
+                & $OnFailure
+                Start-Sleep -Seconds 2
+            } elseif ($i -eq $MaxRetries) {
+                throw "$Label $MaxRetries denemeden sonra basarisiz: $_"
+            }
+        }
+    }
+    return $false
+}
+
+function Ensure-GitRepo {
+    if (-not (Test-Path ".git")) {
+        git init
+        git branch -M $Branch
+    }
+    $remotes = git remote 2>$null
+    if ($remotes -notcontains "origin") {
+        git remote add origin $Remote
+    } else {
+        git remote set-url origin $Remote
+    }
+}
+
+function Push-GitHub {
+    $Token = $env:GITHUB_TOKEN
+    if (-not $Token) { throw "GITHUB_TOKEN bulunamadi (scripts/push.config.local)" }
+
+    Ensure-GitRepo
+
+    git add -A
+    $status = git status --porcelain
+    if ($status) {
+        Write-Step "Git: commit -> $Message"
+        git -c "user.email=$GitEmail" -c "user.name=$GitName" commit -m $Message
+        if ($LASTEXITCODE -ne 0) { throw "Git commit basarisiz" }
+    } else {
+        Write-Host "Git: commit edilecek degisiklik yok." -ForegroundColor Yellow
+    }
+
+    $PushUrl = "https://${Token}@github.com/motiweb-marketing/tas-kamping-asistani.git"
+    git push $PushUrl $Branch 2>&1 | Out-String | Write-Host
+    if ($LASTEXITCODE -ne 0) { throw "Git push basarisiz" }
+}
+
+function Fix-GitPush {
+    $Token = $env:GITHUB_TOKEN
+    $PushUrl = "https://${Token}@github.com/motiweb-marketing/tas-kamping-asistani.git"
+    Write-Host "  Uzak dal cekiliyor (rebase)..." -ForegroundColor Yellow
+    git pull $PushUrl $Branch --rebase 2>&1 | Out-String | Write-Host
+}
+
+function Test-Build {
+    Write-Step "Build kontrolu (npm run build)..."
+    npm run build 2>&1 | Out-String | Write-Host
+    if ($LASTEXITCODE -ne 0) { throw "Build basarisiz" }
+}
+
+function Deploy-Vercel {
+    $VercelToken = $env:VERCEL_TOKEN
+    if (-not $VercelToken) { throw "VERCEL_TOKEN bulunamadi (scripts/push.config.local)" }
+
+    $vercelArgs = @("deploy", "--prod", "--yes", "--token", $VercelToken)
+    npx vercel @vercelArgs 2>&1 | Out-String | Write-Host
+    if ($LASTEXITCODE -ne 0) { throw "Vercel deploy basarisiz" }
+}
+
+function Fix-VercelDeploy {
+    Write-Host "  node_modules ve .next temizleniyor..." -ForegroundColor Yellow
+    if (Test-Path ".next") { Remove-Item -Recurse -Force ".next" }
+    npm install 2>&1 | Out-String | Write-Host
+    Test-Build
+}
+
+Write-Host ""
+Write-Host "=== Tas Kamping Deploy (GitHub + Vercel) ===" -ForegroundColor White
+Write-Host ""
+
+try {
+    Invoke-WithRetry -Label "GitHub Push" -Action { Push-GitHub } -OnFailure { Fix-GitPush }
+    Write-Host "GitHub push basarili." -ForegroundColor Green
+
+    Invoke-WithRetry -Label "Vercel Deploy" -Action {
+        Test-Build
+        Deploy-Vercel
+    } -OnFailure { Fix-VercelDeploy }
+
     Write-Host ""
-    Write-Host "HATA: GITHUB_TOKEN bulunamadi." -ForegroundColor Red
-    Write-Host "  scripts/push.config.example -> scripts/push.config.local kopyalayip token girin." -ForegroundColor Yellow
+    Write-Host "Tamamlandi!" -ForegroundColor Green
+    Write-Host "  GitHub: $Remote" -ForegroundColor Gray
+    Write-Host "  Vercel: production deploy" -ForegroundColor Gray
+    Write-Host ""
+} catch {
+    Write-Host ""
+    Write-Host "DEPLOY BASARISIZ: $_" -ForegroundColor Red
     Write-Host ""
     exit 1
-}
-
-if (-not (Test-Path ".git")) {
-    Write-Host "Git deposu baslatiliyor..." -ForegroundColor Cyan
-    git init
-    git branch -M $Branch
-}
-
-$remotes = git remote 2>$null
-if ($remotes -notcontains "origin") {
-    git remote add origin $Remote
-} else {
-    git remote set-url origin $Remote
-}
-
-Write-Host "Degisiklikler kontrol ediliyor..." -ForegroundColor Cyan
-git add -A
-
-$status = git status --porcelain
-if (-not $status) {
-    Write-Host "Commit edilecek degisiklik yok. Push deneniyor..." -ForegroundColor Yellow
-} else {
-    Write-Host "Commit: $Message" -ForegroundColor Cyan
-    git -c "user.email=$GitEmail" -c "user.name=$GitName" commit -m $Message
-}
-
-$PushUrl = "https://${Token}@github.com/motiweb-marketing/tas-kamping-asistani.git"
-Write-Host "GitHub'a push ediliyor ($Branch)..." -ForegroundColor Cyan
-git push $PushUrl $Branch
-
-if ($LASTEXITCODE -eq 0) {
-    Write-Host ""
-    Write-Host "Basarili! Vercel bagli ise deploy otomatik baslar." -ForegroundColor Green
-    Write-Host "Repo: $Remote" -ForegroundColor Gray
-} else {
-    Write-Host "Push basarisiz (cikis kodu: $LASTEXITCODE)" -ForegroundColor Red
-    exit $LASTEXITCODE
 }

@@ -25,12 +25,16 @@ npm run dev
 
 ## Deploy / Push
 
-GitHub'a güncel kodu göndermek için (Vercel otomatik deploy eder):
-
 ```powershell
-.\scripts\push.ps1
+.\push.ps1                    # GitHub push + Vercel prod deploy (3 denemeye kadar otomatik retry)
+.\push.ps1 -Message "feat: x" # Özel commit mesajı
 ```
 
-İlk kullanımda `scripts/push.config.example` dosyasını `scripts/push.config.local` olarak kopyalayıp GitHub token'ınızı girin.
+İlk kurulum: `scripts/push.config.example` → `scripts/push.config.local` kopyalayın.
+
+| Anahtar | Nereden |
+|---------|---------|
+| `GITHUB_TOKEN` | github.com/settings/tokens |
+| `VERCEL_TOKEN` | vercel.com/account/tokens |
 
 Detaylı kurallar: [kurallar.md](kurallar.md)
