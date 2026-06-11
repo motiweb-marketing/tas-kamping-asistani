@@ -23,8 +23,9 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-# local env files
+# local env files (kok dizinde .env.local — src/.env.local kullanmayin)
 .env*.local
+src/.env.local
 .env.push.local
 scripts/push.config.local
 

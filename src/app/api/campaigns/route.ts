@@ -70,8 +70,10 @@ export async function POST(request: NextRequest) {
 
     const { password_hash: _, ...safeAdmin } = admin;
     return NextResponse.json({ campaign, admin: safeAdmin });
-  } catch {
-    return NextResponse.json({ error: 'Kamp oluşturulamadı' }, { status: 500 });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Kamp oluşturulamadı';
+    console.error('POST /api/campaigns:', message);
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
 
