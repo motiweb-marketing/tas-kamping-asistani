@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { normalizeItemName } from '@/lib/item-names';
 import { dayMenuToFlat, rowsToDayMap } from '@/lib/menu-storage';
 import { getSession } from '@/lib/session';
 import { createServerClient } from '@/lib/supabase/server';
@@ -70,7 +71,24 @@ export async function POST() {
 
     const aiItems = await callOpenRouter(systemPrompt, apiKey);
 
-    const rows = aiItems.map((item) => ({
+    const { data: existingShared } = await supabase
+      .from('items')
+      .select('name')
+      .eq('campaign_id', campaignId)
+      .eq('list_scope', 'shared');
+
+    const seenNames = new Set(
+      (existingShared || []).map((item) => normalizeItemName(item.name))
+    );
+
+    const rows = aiItems
+      .filter((item) => {
+        const normalized = normalizeItemName(item.name);
+        if (!normalized || seenNames.has(normalized)) return false;
+        seenNames.add(normalized);
+        return true;
+      })
+      .map((item) => ({
       campaign_id: campaignId,
       name: item.name,
       quantity: item.quantity,
@@ -86,6 +104,13 @@ export async function POST() {
       price: 0,
       added_by: session.user!.id,
     }));
+
+    if (!rows.length) {
+      return NextResponse.json(
+        { error: 'AI yeni malzeme üretemedi (hepsi listede zaten var olabilir).' },
+        { status: 400 }
+      );
+    }
 
     const { data, error } = await supabase.from('items').insert(rows).select();
 

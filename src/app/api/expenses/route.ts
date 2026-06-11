@@ -77,5 +77,24 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
+  const { data: itemMeta } = await supabase
+    .from('items')
+    .select('name')
+    .eq('id', item_id)
+    .single();
+
+  const { data: tentMeta } = await supabase
+    .from('tents')
+    .select('name')
+    .eq('id', session.user.tent_id)
+    .single();
+
+  await supabase.from('chat_messages').insert({
+    campaign_id: session.user.campaign_id,
+    user_id: session.user.id,
+    message: `${session.user.name} (${tentMeta?.name || 'Çadır'}) — ${itemMeta?.name || 'malzeme'}: ${parsedAmount.toFixed(2)} ₺ harcama kaydetti`,
+    is_system: true,
+  });
+
   return NextResponse.json({ expense });
 }

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { assertNoDuplicateItem } from '@/lib/item-duplicates';
 import { getSession } from '@/lib/session';
 import { createServerClient } from '@/lib/supabase/server';
 
@@ -13,6 +14,30 @@ export async function PATCH(
 
   const body = await request.json();
   const supabase = createServerClient();
+
+  if (body.name !== undefined) {
+    const { data: existing } = await supabase
+      .from('items')
+      .select('id, list_scope')
+      .eq('id', params.id)
+      .eq('campaign_id', session.user.campaign_id)
+      .single();
+
+    if (!existing) {
+      return NextResponse.json({ error: 'Malzeme bulunamadı' }, { status: 404 });
+    }
+
+    const duplicate = await assertNoDuplicateItem(
+      supabase,
+      session.user.campaign_id,
+      body.name,
+      existing.list_scope,
+      params.id
+    );
+    if (duplicate) {
+      return NextResponse.json({ error: duplicate.error }, { status: 409 });
+    }
+  }
 
   const { data: item, error } = await supabase
     .from('items')

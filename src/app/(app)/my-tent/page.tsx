@@ -3,7 +3,9 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import ChecklistItemCard from '@/components/items/ChecklistItemCard';
+import ItemSearchInput from '@/components/items/ItemSearchInput';
 import SharedItemCard from '@/components/items/SharedItemCard';
+import { filterItemsBySearch } from '@/lib/item-names';
 import type { ItemWithRelations, SessionUser } from '@/types';
 
 export default function MyTentPage() {
@@ -11,6 +13,7 @@ export default function MyTentPage() {
   const [tentItems, setTentItems] = useState<ItemWithRelations[]>([]);
   const [user, setUser] = useState<SessionUser | null>(null);
   const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState('');
 
   async function loadShared(tentId: string) {
     const res = await fetch('/api/items?scope=shared');
@@ -55,6 +58,10 @@ export default function MyTentPage() {
     return <p className="text-lg text-gray-500">Yükleniyor...</p>;
   }
 
+  const allItems = [...sharedItems, ...tentItems];
+  const filteredShared = filterItemsBySearch(sharedItems, search);
+  const filteredTent = filterItemsBySearch(tentItems, search);
+
   if (!user?.tent_id) {
     return (
       <div className="rounded-xl bg-yellow-100 p-6 text-lg text-yellow-800">
@@ -75,6 +82,15 @@ export default function MyTentPage() {
         </Link>
       </div>
 
+      {allItems.length > 0 && (
+        <ItemSearchInput
+          value={search}
+          onChange={setSearch}
+          resultCount={filteredShared.length + filteredTent.length}
+          totalCount={allItems.length}
+        />
+      )}
+
       <section>
         <h3 className="mb-2 text-lg font-semibold text-emerald-800">
           Ortak Alışverişten Üstlendiklerimiz ({sharedItems.length})
@@ -86,9 +102,11 @@ export default function MyTentPage() {
               Listeye git
             </Link>
           </p>
+        ) : filteredShared.length === 0 && search.trim() ? (
+          <p className="text-gray-500">Aramanızla eşleşen ortak malzeme yok.</p>
         ) : (
           <div className="flex flex-col gap-3">
-            {sharedItems.map((item) => (
+            {filteredShared.map((item) => (
               <SharedItemCard
                 key={item.id}
                 item={item}
@@ -101,8 +119,11 @@ export default function MyTentPage() {
 
       <section>
         <h3 className="mb-2 text-lg font-semibold text-blue-800">Çadır Ekipmanı</h3>
+        {filteredTent.length === 0 && search.trim() && tentItems.length > 0 ? (
+          <p className="text-gray-500">Aramanızla eşleşen çadır ekipmanı yok.</p>
+        ) : (
         <div className="flex flex-col gap-3">
-          {tentItems.map((item) => (
+          {filteredTent.map((item) => (
             <ChecklistItemCard
               key={item.id}
               item={item}
@@ -111,6 +132,7 @@ export default function MyTentPage() {
             />
           ))}
         </div>
+        )}
       </section>
     </div>
   );

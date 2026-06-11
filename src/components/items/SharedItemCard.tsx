@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useState } from 'react';
 import ExtraBadge from './ExtraBadge';
 import type { ItemWithRelations } from '@/types';
@@ -17,9 +18,6 @@ const DISPOSITION_LABELS = {
 export default function SharedItemCard({ item, onUpdated }: SharedItemCardProps) {
   const [claimQty, setClaimQty] = useState(String(item.my_claim || 1));
   const [showClaim, setShowClaim] = useState(false);
-  const [showExpense, setShowExpense] = useState(false);
-  const [expenseAmount, setExpenseAmount] = useState('');
-  const [expenseNote, setExpenseNote] = useState('');
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
 
@@ -56,31 +54,6 @@ export default function SharedItemCard({ item, onUpdated }: SharedItemCardProps)
 
   async function removeClaim() {
     await fetch(`/api/items/claim?item_id=${item.id}`, { method: 'DELETE' });
-    onUpdated();
-  }
-
-  async function submitExpense(e: React.FormEvent) {
-    e.preventDefault();
-    setSaving(true);
-    setError('');
-    const res = await fetch('/api/expenses', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        item_id: item.id,
-        amount: Number(expenseAmount),
-        description: expenseNote,
-      }),
-    });
-    const data = await res.json();
-    setSaving(false);
-    if (!res.ok) {
-      setError(data.error || 'Harcama eklenemedi');
-      return;
-    }
-    setShowExpense(false);
-    setExpenseAmount('');
-    setExpenseNote('');
     onUpdated();
   }
 
@@ -152,13 +125,12 @@ export default function SharedItemCard({ item, onUpdated }: SharedItemCardProps)
           </button>
         ) : null}
         {item.disposition === 'consumable' && item.my_claim ? (
-          <button
-            type="button"
-            onClick={() => setShowExpense(true)}
-            className="min-h-[44px] rounded-xl bg-blue-600 px-3 text-sm font-semibold text-white"
+          <Link
+            href={`/budget?item=${item.id}`}
+            className="min-h-[44px] inline-flex items-center rounded-xl bg-blue-600 px-3 text-sm font-semibold text-white"
           >
-            Harcama Ekle
-          </button>
+            Harcama Kaydet
+          </Link>
         ) : null}
       </div>
 
@@ -195,42 +167,6 @@ export default function SharedItemCard({ item, onUpdated }: SharedItemCardProps)
         </div>
       )}
 
-      {showExpense && (
-        <form onSubmit={submitExpense} className="mt-3 rounded-lg border-2 border-blue-200 bg-white p-3">
-          <p className="text-sm font-medium text-blue-900">Bu malzeme için harcama (₺)</p>
-          <input
-            type="number"
-            min="0"
-            step="0.01"
-            value={expenseAmount}
-            onChange={(e) => setExpenseAmount(e.target.value)}
-            className="mt-1 w-full rounded-lg border px-3 py-2 text-lg"
-            required
-          />
-          <input
-            placeholder="Not (opsiyonel)"
-            value={expenseNote}
-            onChange={(e) => setExpenseNote(e.target.value)}
-            className="mt-2 w-full rounded-lg border px-3 py-2"
-          />
-          <div className="mt-2 flex gap-2">
-            <button
-              type="submit"
-              disabled={saving}
-              className="rounded-lg bg-blue-600 px-4 py-2 text-white disabled:opacity-50"
-            >
-              {saving ? 'Kaydediliyor...' : 'Harcamayı Kaydet'}
-            </button>
-            <button
-              type="button"
-              onClick={() => setShowExpense(false)}
-              className="rounded-lg bg-gray-200 px-4 py-2"
-            >
-              İptal
-            </button>
-          </div>
-        </form>
-      )}
     </div>
   );
 }

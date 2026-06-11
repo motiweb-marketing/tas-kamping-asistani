@@ -1,7 +1,9 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
+import ItemSearchInput from '@/components/items/ItemSearchInput';
+import { itemMatchesSearch } from '@/lib/item-names';
 import type { SummaryClaimLine } from '@/types';
 
 interface SummaryData {
@@ -60,6 +62,7 @@ function ItemBlock({ line }: { line: SummaryClaimLine }) {
 export default function SummaryPage() {
   const [data, setData] = useState<SummaryData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState('');
 
   const load = useCallback(async () => {
     const res = await fetch('/api/summary');
@@ -71,6 +74,23 @@ export default function SummaryPage() {
   useEffect(() => {
     load();
   }, [load]);
+
+  const filteredStandard = useMemo(
+    () =>
+      data?.standard.filter((line) =>
+        itemMatchesSearch({ name: line.item_name }, search)
+      ) ?? [],
+    [data?.standard, search]
+  );
+  const filteredSharedFood = useMemo(
+    () =>
+      data?.shared_food.filter((line) =>
+        itemMatchesSearch({ name: line.item_name }, search)
+      ) ?? [],
+    [data?.shared_food, search]
+  );
+  const totalItems = (data?.standard.length ?? 0) + (data?.shared_food.length ?? 0);
+  const filteredTotal = filteredStandard.length + filteredSharedFood.length;
 
   if (loading) return <p className="text-lg text-gray-500">Yükleniyor...</p>;
   if (!data) return <p className="text-lg text-gray-500">Özet yüklenemedi.</p>;
@@ -103,39 +123,59 @@ export default function SummaryPage() {
         </div>
       </div>
 
-      <section>
-        <h3 className="mb-2 text-lg font-semibold">Standart Malzemeler (tabak, çatal…)</h3>
-        <div className="flex flex-col gap-3">
-          {data.standard.map((line) => (
-            <ItemBlock key={line.item_id} line={line} />
-          ))}
-        </div>
-      </section>
+      {totalItems > 0 && (
+        <ItemSearchInput
+          value={search}
+          onChange={setSearch}
+          resultCount={filteredTotal}
+          totalCount={totalItems}
+        />
+      )}
 
-      {data.shared_food.length > 0 && (
-        <section>
-          <h3 className="mb-2 text-lg font-semibold">Yemek & Ortak Alışveriş</h3>
-          <div className="flex flex-col gap-3">
-            {data.shared_food.map((line) => (
-              <ItemBlock key={line.item_id} line={line} />
-            ))}
-          </div>
-        </section>
+      {search.trim() && filteredTotal === 0 ? (
+        <p className="text-lg text-gray-500">Aramanızla eşleşen malzeme yok.</p>
+      ) : (
+        <>
+          <section>
+            <h3 className="mb-2 text-lg font-semibold">Standart Malzemeler (tabak, çatal…)</h3>
+            <div className="flex flex-col gap-3">
+              {filteredStandard.map((line) => (
+                <ItemBlock key={line.item_id} line={line} />
+              ))}
+            </div>
+          </section>
+
+          {filteredSharedFood.length > 0 && (
+            <section>
+              <h3 className="mb-2 text-lg font-semibold">Yemek & Ortak Alışveriş</h3>
+              <div className="flex flex-col gap-3">
+                {filteredSharedFood.map((line) => (
+                  <ItemBlock key={line.item_id} line={line} />
+                ))}
+              </div>
+            </section>
+          )}
+        </>
       )}
 
       {data.expenses.length > 0 && (
         <section>
-          <h3 className="mb-2 text-lg font-semibold">Son Harcamalar</h3>
+          <div className="mb-2 flex items-center justify-between gap-2">
+            <h3 className="text-lg font-semibold">Son Harcamalar</h3>
+            <Link href="/budget" className="text-sm font-semibold text-blue-700 underline">
+              Tüm harcamalar →
+            </Link>
+          </div>
           <ul className="flex flex-col gap-2">
-            {data.expenses.map((e) => (
+            {data.expenses.slice(0, 5).map((e) => (
               <li key={e.id} className="rounded-lg border bg-gray-50 px-3 py-2 text-sm">
                 <strong>{e.tent?.name}</strong> — {e.item?.name}: {Number(e.amount).toFixed(2)} ₺
                 {e.description && <span className="text-gray-600"> ({e.description})</span>}
               </li>
             ))}
           </ul>
-          <Link href="/budget" className="mt-2 inline-block text-sm text-emerald-700 underline">
-            Bütçe detayı →
+          <Link href="/budget?tab=bakiye" className="mt-2 inline-block text-sm text-emerald-700 underline">
+            Bakiye hesabına git →
           </Link>
         </section>
       )}

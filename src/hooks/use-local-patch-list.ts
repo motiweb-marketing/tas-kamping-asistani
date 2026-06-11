@@ -25,16 +25,30 @@ export function useLocalPatchList<T extends { id: string }>(
   }, []);
 
   const patch = useCallback(
-    async (id: string, fields: Partial<T>, endpoint = `/api/items/${id}`) => {
+    async (
+      id: string,
+      fields: Partial<T>,
+      endpoint = `/api/items/${id}`
+    ): Promise<string | null> => {
+      const previous = rows.find((r) => r.id === id);
       setRows((prev) => prev.map((r) => (r.id === id ? { ...r, ...fields } : r)));
       const res = await fetch(endpoint, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(fields),
       });
-      if (!res.ok) await reload();
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        if (previous) {
+          setRows((prev) => prev.map((r) => (r.id === id ? previous : r)));
+        } else {
+          await reload();
+        }
+        return (data as { error?: string }).error || 'Kaydedilemedi';
+      }
+      return null;
     },
-    [reload]
+    [reload, rows]
   );
 
   const remove = useCallback(

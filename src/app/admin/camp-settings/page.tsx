@@ -28,8 +28,15 @@ export default function CampSettingsPage() {
     location: string;
     start_date: string;
     end_date: string;
+    adult_accommodation_fee: number;
+    child_accommodation_fee: number;
   } | null>(null);
   const [dates, setDates] = useState({ start_date: '', end_date: '' });
+  const [accommodationFees, setAccommodationFees] = useState({
+    adult_accommodation_fee: '',
+    child_accommodation_fee: '',
+  });
+  const [savingFees, setSavingFees] = useState(false);
   const [days, setDays] = useState<DayCard[]>([]);
   const [publishedDays, setPublishedDays] = useState<DayCard[] | null>(null);
   const [menuAiPrompt, setMenuAiPrompt] = useState('');
@@ -62,6 +69,10 @@ export default function CampSettingsPage() {
         setDates({
           start_date: campData.campaign.start_date,
           end_date: campData.campaign.end_date,
+        });
+        setAccommodationFees({
+          adult_accommodation_fee: String(campData.campaign.adult_accommodation_fee ?? 0),
+          child_accommodation_fee: String(campData.campaign.child_accommodation_fee ?? 0),
         });
         if (daysData.menu_ai_prompt !== undefined) {
           setMenuAiPrompt(daysData.menu_ai_prompt || '');
@@ -104,6 +115,32 @@ export default function CampSettingsPage() {
       `Kamp tarihleri güncellendi. Nöbet planı yenilendi (${data.duties_regenerated} slot).`
     );
     load();
+  }
+
+  async function saveAccommodationFees(e: React.FormEvent) {
+    e.preventDefault();
+    setSavingFees(true);
+    setError('');
+    setMessage('');
+
+    const res = await fetch('/api/admin/campaign', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        adult_accommodation_fee: Number(accommodationFees.adult_accommodation_fee),
+        child_accommodation_fee: Number(accommodationFees.child_accommodation_fee),
+      }),
+    });
+    const data = await res.json();
+    setSavingFees(false);
+
+    if (!res.ok) {
+      setError(data.error || 'Konaklama ücretleri kaydedilemedi');
+      return;
+    }
+
+    setCampaign(data.campaign);
+    setMessage('Konaklama ücretleri kaydedildi. Bakiye hesabına yansır.');
   }
 
   async function saveAiPrompt() {
@@ -254,6 +291,60 @@ export default function CampSettingsPage() {
           className="mt-4 min-h-[48px] w-full rounded-xl bg-emerald-600 text-lg font-semibold text-white disabled:opacity-50 sm:w-auto sm:px-8"
         >
           {savingDates ? 'Kaydediliyor...' : 'Tarihleri Kaydet'}
+        </button>
+      </form>
+
+      <form
+        onSubmit={saveAccommodationFees}
+        className="rounded-xl border-2 border-blue-200 bg-blue-50 p-4"
+      >
+        <h3 className="mb-2 text-lg font-semibold text-blue-900">Tesis Konaklama Ücreti</h3>
+        <p className="mb-3 text-sm text-blue-800">
+          Çadır / tesis kişi başı konaklama bedeli. Yetişkin ve çocuk fiyatları ayrı girilir; bütçe
+          bakiyesinde her çadırın üyelerine göre hesaplanır (15 yaş altı = çocuk).
+        </p>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div>
+            <label className="mb-1 block text-sm font-medium">Yetişkin (15+) — kişi başı (₺)</label>
+            <input
+              type="number"
+              min="0"
+              step="0.01"
+              value={accommodationFees.adult_accommodation_fee}
+              onChange={(e) =>
+                setAccommodationFees({
+                  ...accommodationFees,
+                  adult_accommodation_fee: e.target.value,
+                })
+              }
+              className="w-full rounded-xl border-2 px-4 py-3 text-lg"
+              required
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-sm font-medium">Çocuk (15 altı) — kişi başı (₺)</label>
+            <input
+              type="number"
+              min="0"
+              step="0.01"
+              value={accommodationFees.child_accommodation_fee}
+              onChange={(e) =>
+                setAccommodationFees({
+                  ...accommodationFees,
+                  child_accommodation_fee: e.target.value,
+                })
+              }
+              className="w-full rounded-xl border-2 px-4 py-3 text-lg"
+              required
+            />
+          </div>
+        </div>
+        <button
+          type="submit"
+          disabled={savingFees}
+          className="mt-4 min-h-[48px] w-full rounded-xl bg-blue-600 text-lg font-semibold text-white disabled:opacity-50 sm:w-auto sm:px-8"
+        >
+          {savingFees ? 'Kaydediliyor...' : 'Konaklama Ücretlerini Kaydet'}
         </button>
       </form>
 

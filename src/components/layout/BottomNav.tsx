@@ -9,7 +9,7 @@ const tabs = [
   { href: '/menu', label: 'Menü', icon: '🍽️' },
   { href: '/my-tent', label: 'Çadır', icon: '⛺' },
   { href: '/duties', label: 'Görev', icon: '📅' },
-  { href: '/budget', label: 'Bütçe', icon: '💰' },
+  { href: '/budget', label: 'Harcama', icon: '💰' },
   { href: '/chat', label: 'Chat', icon: '💬' },
 ];
 

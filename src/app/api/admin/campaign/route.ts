@@ -10,17 +10,41 @@ export async function PATCH(request: NextRequest) {
   }
 
   const body = await request.json();
-  const { start_date, end_date, name, location, menu_ai_prompt } = body;
+  const {
+    start_date,
+    end_date,
+    name,
+    location,
+    menu_ai_prompt,
+    adult_accommodation_fee,
+    child_accommodation_fee,
+  } = body;
 
   const supabase = createServerClient();
   const campaignId = session.user.campaign_id;
 
-  const updates: Record<string, string> = {};
+  const updates: Record<string, string | number> = {};
   if (start_date) updates.start_date = start_date;
   if (end_date) updates.end_date = end_date;
   if (name) updates.name = name;
   if (location) updates.location = location;
   if (menu_ai_prompt !== undefined) updates.menu_ai_prompt = String(menu_ai_prompt);
+
+  if (adult_accommodation_fee !== undefined) {
+    const fee = Number(adult_accommodation_fee);
+    if (Number.isNaN(fee) || fee < 0) {
+      return NextResponse.json({ error: 'Geçerli yetişkin konaklama ücreti girin' }, { status: 400 });
+    }
+    updates.adult_accommodation_fee = fee;
+  }
+
+  if (child_accommodation_fee !== undefined) {
+    const fee = Number(child_accommodation_fee);
+    if (Number.isNaN(fee) || fee < 0) {
+      return NextResponse.json({ error: 'Geçerli çocuk konaklama ücreti girin' }, { status: 400 });
+    }
+    updates.child_accommodation_fee = fee;
+  }
 
   if (!Object.keys(updates).length) {
     return NextResponse.json({ error: 'Güncellenecek alan yok' }, { status: 400 });
@@ -40,7 +64,9 @@ export async function PATCH(request: NextRequest) {
     .from('campaigns')
     .update(updates)
     .eq('id', campaignId)
-    .select('id, name, location, start_date, end_date, menu_ai_prompt')
+    .select(
+      'id, name, location, start_date, end_date, menu_ai_prompt, adult_accommodation_fee, child_accommodation_fee'
+    )
     .single();
 
   if (error || !campaign) {

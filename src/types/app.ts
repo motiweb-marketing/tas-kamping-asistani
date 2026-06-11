@@ -80,6 +80,8 @@ export interface BudgetTentBalance {
   member_count: number;
   total_shares: number;
   share_cost: number;
+  accommodation_owed: number;
+  grocery_expected: number;
   expected_contribution: number;
   actual_spent: number;
   balance: number;
@@ -89,6 +91,10 @@ export interface BudgetTentBalance {
 /** Kamp geneli bütçe özeti */
 export interface BudgetSummary {
   campaign: Pick<Campaign, 'id' | 'name'>;
+  adult_accommodation_fee: number;
+  child_accommodation_fee: number;
+  total_accommodation_cost: number;
+  total_grocery_cost: number;
   total_cost: number;
   total_shares: number;
   cost_per_share: number;

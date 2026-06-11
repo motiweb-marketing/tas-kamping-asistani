@@ -1,13 +1,17 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import ItemSearchInput from '@/components/items/ItemSearchInput';
 import { useDebouncedFn } from '@/hooks/use-debounced-fn';
 import { useLocalPatchList } from '@/hooks/use-local-patch-list';
+import { filterItemsBySearch } from '@/lib/item-names';
 import type { Item, Tent } from '@/types';
 
 export default function ItemsReviewPage() {
   const [tents, setTents] = useState<Tent[]>([]);
   const [publishing, setPublishing] = useState(false);
+  const [search, setSearch] = useState('');
+  const [patchError, setPatchError] = useState<string | null>(null);
 
   const loadItems = useCallback(async () => {
     const res = await fetch('/api/items?published=false&scope=shared&exclude_standard=true');
@@ -19,9 +23,14 @@ export default function ItemsReviewPage() {
     useLocalPatchList<Item>(loadItems);
 
   const debouncedPatch = useDebouncedFn(
-    (id: string, fields: Partial<Item>) => patch(id, fields),
+    async (id: string, fields: Partial<Item>) => {
+      const err = await patch(id, fields);
+      setPatchError(err);
+    },
     800
   );
+
+  const filteredItems = filterItemsBySearch(items, search);
 
   const loadTents = useCallback(async () => {
     const res = await fetch('/api/tents');
@@ -71,8 +80,23 @@ export default function ItemsReviewPage() {
         </span>
       </p>
 
+      {patchError && (
+        <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{patchError}</p>
+      )}
+
+      {items.length > 0 && (
+        <ItemSearchInput
+          value={search}
+          onChange={setSearch}
+          resultCount={filteredItems.length}
+          totalCount={items.length}
+        />
+      )}
+
       {items.length === 0 ? (
         <p className="text-lg text-gray-500">Taslak ortak malzeme yok.</p>
+      ) : filteredItems.length === 0 ? (
+        <p className="text-lg text-gray-500">Aramanızla eşleşen malzeme yok.</p>
       ) : (
         <div className="overflow-x-auto">
           <table className="w-full table-fixed text-left text-base">
@@ -87,7 +111,7 @@ export default function ItemsReviewPage() {
               </tr>
             </thead>
             <tbody>
-              {items.map((item) => (
+              {filteredItems.map((item) => (
                 <tr key={item.id} className="border-b align-top">
                   <td className="p-2">
                     <input

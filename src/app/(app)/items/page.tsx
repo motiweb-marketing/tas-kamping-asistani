@@ -3,7 +3,10 @@
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import ChecklistItemCard from '@/components/items/ChecklistItemCard';
+import ItemSearchInput from '@/components/items/ItemSearchInput';
 import SharedItemCard from '@/components/items/SharedItemCard';
+import { clientDuplicateCheck } from '@/lib/item-duplicates';
+import { filterItemsBySearch } from '@/lib/item-names';
 import type { ItemCategory, ItemListScope, ItemWithRelations } from '@/types';
 
 type Tab = ItemListScope;
@@ -31,6 +34,8 @@ export default function ItemsPage() {
   const [items, setItems] = useState<ItemWithRelations[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAdd, setShowAdd] = useState(false);
+  const [search, setSearch] = useState('');
+  const [addError, setAddError] = useState<string | null>(null);
   const [newItem, setNewItem] = useState<{ name: string; quantity: string; category: ItemCategory }>({
     name: '',
     quantity: '1',
@@ -47,6 +52,7 @@ export default function ItemsPage() {
   }, []);
 
   useEffect(() => {
+    setSearch('');
     loadItems(tab);
   }, [tab, loadItems]);
 
@@ -61,21 +67,33 @@ export default function ItemsPage() {
 
   async function handleAddItem(e: React.FormEvent) {
     e.preventDefault();
+    setAddError(null);
+
+    const duplicate = clientDuplicateCheck(newItem.name, items);
+    if (duplicate) {
+      setAddError(duplicate);
+      return;
+    }
+
     const res = await fetch('/api/items', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ ...newItem, list_scope: 'shared' }),
     });
+    const data = await res.json().catch(() => ({}));
     if (res.ok) {
       setNewItem({ name: '', quantity: '1', category: 'food' });
       setShowAdd(false);
       loadItems(tab);
+    } else {
+      setAddError((data as { error?: string }).error || 'Eklenemedi');
     }
   }
 
   const activeTab = TABS.find((t) => t.id === tab)!;
-  const standardItems = items.filter((i) => i.is_standard);
-  const foodItems = items.filter((i) => !i.is_standard);
+  const filteredItems = filterItemsBySearch(items, search);
+  const standardItems = filteredItems.filter((i) => i.is_standard);
+  const foodItems = filteredItems.filter((i) => !i.is_standard);
 
   return (
     <div className="flex flex-col gap-4">
@@ -107,6 +125,15 @@ export default function ItemsPage() {
         ))}
       </div>
 
+      {!loading && items.length > 0 && (
+        <ItemSearchInput
+          value={search}
+          onChange={setSearch}
+          resultCount={filteredItems.length}
+          totalCount={items.length}
+        />
+      )}
+
       {tab === 'shared' && (
         <div className="flex justify-end">
           <button
@@ -123,10 +150,16 @@ export default function ItemsPage() {
           <input
             placeholder="Malzeme adı"
             value={newItem.name}
-            onChange={(e) => setNewItem({ ...newItem, name: e.target.value })}
+            onChange={(e) => {
+              setNewItem({ ...newItem, name: e.target.value });
+              setAddError(null);
+            }}
             className="mb-2 w-full rounded-lg border px-3 py-2 text-lg"
             required
           />
+          {addError && (
+            <p className="mb-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{addError}</p>
+          )}
           <input
             placeholder="Miktar"
             value={newItem.quantity}
@@ -153,8 +186,10 @@ export default function ItemsPage() {
         <p className="text-lg text-gray-500">
           {tab === 'shared' ? 'Henüz ortak liste yok.' : 'Liste henüz hazırlanmadı.'}
         </p>
+      ) : filteredItems.length === 0 ? (
+        <p className="text-lg text-gray-500">Aramanızla eşleşen malzeme yok.</p>
       ) : tab === 'personal' || tab === 'tent' ? (
-        items.map((item) => (
+        filteredItems.map((item) => (
           <ChecklistItemCard
             key={item.id}
             item={item}

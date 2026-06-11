@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { assertNoDuplicateItem } from '@/lib/item-duplicates';
 import { enrichItemWithClaims, normalizeClaims } from '@/lib/item-claims';
 import { ensureCampaignRecommendations } from '@/lib/recommendations';
 import { syncStandardSharedItems } from '@/lib/sync-standard-items';
@@ -168,6 +169,18 @@ export async function POST(request: NextRequest) {
   }
 
   const supabase = createServerClient();
+  const scope = list_scope as ItemListScope;
+
+  const duplicate = await assertNoDuplicateItem(
+    supabase,
+    session.user.campaign_id,
+    name,
+    scope
+  );
+  if (duplicate) {
+    return NextResponse.json({ error: duplicate.error }, { status: 409 });
+  }
+
   const { data: item, error } = await supabase
     .from('items')
     .insert({

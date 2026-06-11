@@ -13,7 +13,11 @@ export async function GET() {
   const supabase = createServerClient();
 
   const [campaignRes, usersRes, tentsRes, itemsRes, expensesRes] = await Promise.all([
-    supabase.from('campaigns').select('id, name').eq('id', campaignId).single(),
+    supabase
+      .from('campaigns')
+      .select('id, name, adult_accommodation_fee, child_accommodation_fee')
+      .eq('id', campaignId)
+      .single(),
     supabase
       .from('users')
       .select('id, campaign_id, tent_id, name, age, role, username, created_at')

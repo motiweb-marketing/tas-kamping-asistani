@@ -23,8 +23,10 @@ export default function TentBalanceCard({ balance }: TentBalanceCardProps) {
       </div>
       <div className="mt-3 space-y-1 text-base">
         <p>Üye: {balance.member_count} kişi ({balance.total_shares} pay)</p>
-        <p>Harcaması gereken: {balance.expected_contribution.toFixed(2)} ₺</p>
-        <p>Ödediği: {balance.actual_spent.toFixed(2)} ₺</p>
+        <p>Konaklama payı: {balance.accommodation_owed.toFixed(2)} ₺</p>
+        <p>Alışveriş payı: {balance.grocery_expected.toFixed(2)} ₺</p>
+        <p>Toplam ödemesi gereken: {balance.expected_contribution.toFixed(2)} ₺</p>
+        <p>Market harcaması (ödediği): {balance.actual_spent.toFixed(2)} ₺</p>
         <p className={`font-bold ${config.text}`}>
           Bakiye: {balance.balance > 0 ? '+' : ''}{balance.balance.toFixed(2)} ₺
         </p>

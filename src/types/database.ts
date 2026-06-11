@@ -23,6 +23,8 @@ export interface Campaign {
   openrouter_api_key: string | null;
   menu_ai_prompt: string | null;
   published_menu: string | null;
+  adult_accommodation_fee: number;
+  child_accommodation_fee: number;
   created_at: string;
 }
 
