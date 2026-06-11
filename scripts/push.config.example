@@ -1,0 +1,4 @@
+# Bu dosyayı push.config.local olarak kopyalayın (git'e eklenmez)
+GITHUB_TOKEN=ghp_xxxxxxxxxxxxxxxxxxxx
+GIT_USER_EMAIL=seo.okacar@gmail.com
+GIT_USER_NAME=motiweb-marketing

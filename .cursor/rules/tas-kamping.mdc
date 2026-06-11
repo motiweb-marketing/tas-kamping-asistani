@@ -1,0 +1,27 @@
+---
+description: Taş Kamping Asistanı proje kuralları — her oturumda geçerli
+alwaysApply: true
+---
+
+# Taş Kamping Asistanı
+
+Detaylı anayasa: `kurallar.md` (her zaman oku).
+
+## Stack
+Next.js 14 App Router, TypeScript, Tailwind CSS, Supabase PostgreSQL, Vercel, OpenRouter API.
+
+## Auth
+Basit username/password. `password_hash` (bcrypt). Supabase Auth yok. RLS kapalı — yetki middleware + API'de.
+
+## İş Kuralları
+- Sorumluluk **çadır bazlı**: `assigned_tent_id` = kullanıcının `tent_id`
+- Ekstra item: `is_extra=true`, rozet + chat sistem mesajı
+- Bütçe: 15 altı=0.5 pay, 15+=1 pay; çadır alacaklı/borçlu hesabı
+- AI listesi: `is_published=false` → admin review → yayınla
+- OpenRouter anahtarı: `campaigns.openrouter_api_key` (DB), env değil; admin `/admin/settings`
+
+## UI
+Mobile-first, `text-lg`, `min-h-[48px]` butonlar. Turuncu=atanmamış, yeşil=atanmış item. BottomNav 4 sekme. WhatsApp chat. Türkçe UI.
+
+## Kod
+`@/` import alias. Tipler `@/types`. Server component varsayılan. Minimal diff — mevcut dosyaları silme.
