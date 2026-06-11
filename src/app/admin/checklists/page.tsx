@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useState } from 'react';
+import { useDebouncedFn } from '@/hooks/use-debounced-fn';
 import { useLocalPatchList } from '@/hooks/use-local-patch-list';
 import type { Item, ItemListScope } from '@/types';
 
@@ -11,6 +12,7 @@ function ChecklistSection({
   rows,
   setField,
   patch,
+  debouncedPatch,
   remove,
   onAdd,
   adding,
@@ -24,6 +26,7 @@ function ChecklistSection({
   rows: Item[];
   setField: (id: string, fields: Partial<Item>) => void;
   patch: (id: string, fields: Partial<Item>) => Promise<void>;
+  debouncedPatch: (id: string, fields: Partial<Item>) => void;
   remove: (id: string) => Promise<void>;
   onAdd: (scope: ItemListScope) => void;
   adding: ItemListScope | null;
@@ -40,23 +43,32 @@ function ChecklistSection({
           <div key={item.id} className="rounded-lg border bg-gray-50 p-3">
             <input
               value={item.name}
-              onChange={(e) => setField(item.id, { name: e.target.value })}
-              onBlur={(e) => patch(item.id, { name: e.target.value })}
-              className="mb-1 w-full rounded border px-2 py-1 font-medium"
+              onChange={(e) => {
+                const v = e.target.value;
+                setField(item.id, { name: v });
+                debouncedPatch(item.id, { name: v });
+              }}
+              className="mb-1 w-full rounded border px-2 py-1 text-base font-medium"
             />
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               <input
                 value={item.quantity}
-                onChange={(e) => setField(item.id, { quantity: e.target.value })}
-                onBlur={(e) => patch(item.id, { quantity: e.target.value })}
-                className="w-28 rounded border px-2 py-1 text-sm"
+                onChange={(e) => {
+                  const v = e.target.value;
+                  setField(item.id, { quantity: v });
+                  debouncedPatch(item.id, { quantity: v });
+                }}
+                className="w-28 rounded border px-2 py-1 text-base"
                 placeholder="Miktar"
               />
               <input
                 value={item.notes || ''}
-                onChange={(e) => setField(item.id, { notes: e.target.value })}
-                onBlur={(e) => patch(item.id, { notes: e.target.value })}
-                className="flex-1 rounded border px-2 py-1 text-sm"
+                onChange={(e) => {
+                  const v = e.target.value;
+                  setField(item.id, { notes: v });
+                  debouncedPatch(item.id, { notes: v });
+                }}
+                className="min-w-[120px] flex-1 rounded border px-2 py-1 text-base"
                 placeholder="Not / açıklama"
               />
               <button
@@ -139,6 +151,15 @@ export default function ChecklistsAdminPage() {
   const personalList = useLocalPatchList<Item>(loadPersonal);
   const tentList = useLocalPatchList<Item>(loadTent);
 
+  const debouncedPersonalPatch = useDebouncedFn(
+    (id: string, fields: Partial<Item>) => personalList.patch(id, fields),
+    800
+  );
+  const debouncedTentPatch = useDebouncedFn(
+    (id: string, fields: Partial<Item>) => tentList.patch(id, fields),
+    800
+  );
+
   const loading = personalList.loading || tentList.loading;
 
   async function addItem(scope: ItemListScope) {
@@ -182,6 +203,7 @@ export default function ChecklistsAdminPage() {
         rows={personalList.rows}
         setField={personalList.setField}
         patch={personalList.patch}
+        debouncedPatch={debouncedPersonalPatch}
         remove={personalList.remove}
         onAdd={addItem}
         adding={adding}
@@ -197,6 +219,7 @@ export default function ChecklistsAdminPage() {
         rows={tentList.rows}
         setField={tentList.setField}
         patch={tentList.patch}
+        debouncedPatch={debouncedTentPatch}
         remove={tentList.remove}
         onAdd={addItem}
         adding={adding}

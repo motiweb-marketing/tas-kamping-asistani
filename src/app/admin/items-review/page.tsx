@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import { useDebouncedFn } from '@/hooks/use-debounced-fn';
 import { useLocalPatchList } from '@/hooks/use-local-patch-list';
 import type { Item, Tent } from '@/types';
 
@@ -16,6 +17,11 @@ export default function ItemsReviewPage() {
 
   const { rows: items, loading, reload, setField, patch, remove } =
     useLocalPatchList<Item>(loadItems);
+
+  const debouncedPatch = useDebouncedFn(
+    (id: string, fields: Partial<Item>) => patch(id, fields),
+    800
+  );
 
   const loadTents = useCallback(async () => {
     const res = await fetch('/api/tents');
@@ -60,6 +66,9 @@ export default function ItemsReviewPage() {
 
       <p className="text-lg text-gray-600">
         {items.length} taslak ortak malzeme — düzenleyin, çadır atayın, ardından yayınlayın.
+        <span className="block text-sm text-gray-500">
+          Değişiklikler yazmayı bıraktıktan ~1 sn sonra otomatik kaydedilir (iPhone uyumlu).
+        </span>
       </p>
 
       {items.length === 0 ? (
@@ -83,17 +92,23 @@ export default function ItemsReviewPage() {
                   <td className="p-2">
                     <input
                       value={item.name}
-                      onChange={(e) => setField(item.id, { name: e.target.value })}
-                      onBlur={(e) => patch(item.id, { name: e.target.value })}
-                      className="w-full rounded border px-2 py-1"
+                      onChange={(e) => {
+                        const v = e.target.value;
+                        setField(item.id, { name: v });
+                        debouncedPatch(item.id, { name: v });
+                      }}
+                      className="w-full rounded border px-2 py-1 text-base"
                     />
                   </td>
                   <td className="p-2">
                     <input
                       value={item.quantity}
-                      onChange={(e) => setField(item.id, { quantity: e.target.value })}
-                      onBlur={(e) => patch(item.id, { quantity: e.target.value })}
-                      className="w-full rounded border px-2 py-1"
+                      onChange={(e) => {
+                        const v = e.target.value;
+                        setField(item.id, { quantity: v });
+                        debouncedPatch(item.id, { quantity: v });
+                      }}
+                      className="w-full rounded border px-2 py-1 text-base"
                     />
                   </td>
                   <td className="p-2">
@@ -113,10 +128,13 @@ export default function ItemsReviewPage() {
                   <td className="p-2">
                     <input
                       value={item.notes || ''}
-                      onChange={(e) => setField(item.id, { notes: e.target.value })}
-                      onBlur={(e) => patch(item.id, { notes: e.target.value })}
+                      onChange={(e) => {
+                        const v = e.target.value;
+                        setField(item.id, { notes: v });
+                        debouncedPatch(item.id, { notes: v });
+                      }}
                       placeholder="Örn: organik tercih"
-                      className="w-full rounded border px-2 py-1"
+                      className="w-full rounded border px-2 py-1 text-base"
                     />
                   </td>
                   <td className="p-2">

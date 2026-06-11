@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getIronSession } from 'iron-session';
 import { sessionOptions, SessionData } from '@/lib/session';
 
-const protectedPaths = ['/items', '/my-tent', '/budget', '/chat', '/duties', '/menu', '/admin'];
+const protectedPaths = ['/items', '/my-tent', '/budget', '/chat', '/duties', '/menu', '/summary', '/admin'];
 const authPaths = ['/login'];
 
 function homeForRole(role?: string): string {
@@ -32,6 +32,11 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL('/items', request.url));
   }
 
+  if (!pathname.startsWith('/api') && !pathname.includes('.')) {
+    response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate');
+    response.headers.set('Pragma', 'no-cache');
+  }
+
   return response;
 }
 
@@ -43,6 +48,7 @@ export const config = {
     '/chat/:path*',
     '/duties/:path*',
     '/menu/:path*',
+    '/summary/:path*',
     '/admin/:path*',
     '/login',
     '/login/:path*',

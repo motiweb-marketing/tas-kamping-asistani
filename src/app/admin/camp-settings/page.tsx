@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
+import { useDebouncedFn } from '@/hooks/use-debounced-fn';
 import { SECTION_LABELS } from '@/lib/camp-slots';
 import type { CampaignSettings } from '@/types';
 
@@ -40,7 +41,10 @@ export default function CampSettingsPage() {
   const [generating, setGenerating] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
+  const [savingDay, setSavingDay] = useState<string | null>(null);
   const editingCount = useRef(0);
+  const daysRef = useRef(days);
+  daysRef.current = days;
 
   const load = useCallback(async () => {
     const [campRes, daysRes, settingsRes] = await Promise.all([
@@ -119,7 +123,8 @@ export default function CampSettingsPage() {
     setMessage('AI talimatı kaydedildi.');
   }
 
-  async function saveDay(card: DayCard) {
+  async function saveDay(card: DayCard, showFeedback = false) {
+    if (showFeedback) setSavingDay(card.date);
     const res = await fetch('/api/menus/day', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
@@ -136,21 +141,22 @@ export default function CampSettingsPage() {
     if (!res.ok) {
       const data = await res.json();
       setError(data.error || 'Kaydedilemedi');
+    } else if (showFeedback) {
+      setMessage(`${card.title} kaydedildi.`);
     }
+    if (showFeedback) setSavingDay(null);
   }
+
+  const debouncedSaveDay = useDebouncedFn((date: string) => {
+    const card = daysRef.current.find((d) => d.date === date);
+    if (card) void saveDay(card);
+  }, 1000);
 
   function updateField(date: string, field: SectionKey, value: string) {
     setDays((prev) =>
       prev.map((d) => (d.date === date ? { ...d, [field]: value } : d))
     );
-  }
-
-  function handleBlur(date: string) {
-    setDays((prev) => {
-      const card = prev.find((d) => d.date === date);
-      if (card) void saveDay(card);
-      return prev;
-    });
+    debouncedSaveDay(date);
   }
 
   async function publishMenu() {
@@ -260,10 +266,7 @@ export default function CampSettingsPage() {
           value={menuAiPrompt}
           onChange={(e) => setMenuAiPrompt(e.target.value)}
           onFocus={() => { editingCount.current += 1; }}
-          onBlur={() => {
-            editingCount.current = Math.max(0, editingCount.current - 1);
-            void saveAiPrompt();
-          }}
+          onBlur={() => { editingCount.current = Math.max(0, editingCount.current - 1); }}
           placeholder="Örn: Menüleri aile dostu ve net yaz. Vejetaryen seçenekleri belirt. Porsiyonları 12 kişi için hesapla..."
           rows={4}
           className="w-full rounded-lg border-2 border-purple-200 px-3 py-2 text-base"
@@ -280,6 +283,9 @@ export default function CampSettingsPage() {
 
       <div>
         <h3 className="mb-2 text-lg font-semibold">Ham Menü Notları</h3>
+        <p className="mb-3 text-sm text-gray-500">
+          Yazmayı bıraktıktan ~1 sn sonra otomatik kaydedilir. iPhone&apos;da emin olmak için gün kartındaki Kaydet&apos;e de basabilirsiniz.
+        </p>
         {days.length === 0 ? (
           <p className="text-gray-500">Geçerli kamp tarihi girin ve kaydedin.</p>
         ) : (
@@ -307,10 +313,7 @@ export default function CampSettingsPage() {
                           value={card[key]}
                           onChange={(e) => updateField(card.date, key, e.target.value)}
                           onFocus={() => { editingCount.current += 1; }}
-                          onBlur={() => {
-                            editingCount.current = Math.max(0, editingCount.current - 1);
-                            handleBlur(card.date);
-                          }}
+                          onBlur={() => { editingCount.current = Math.max(0, editingCount.current - 1); }}
                           placeholder={`${label} notları...`}
                           rows={3}
                           className="w-full rounded-lg border-2 border-gray-200 px-3 py-2 text-base focus:border-emerald-500 focus:outline-none"
@@ -319,6 +322,14 @@ export default function CampSettingsPage() {
                     ) : null
                   )}
                 </div>
+                <button
+                  type="button"
+                  onClick={() => saveDay(card, true)}
+                  disabled={savingDay === card.date}
+                  className="mt-4 min-h-[44px] w-full rounded-lg bg-emerald-600 text-base font-semibold text-white disabled:opacity-50"
+                >
+                  {savingDay === card.date ? 'Kaydediliyor...' : 'Bu Günü Kaydet'}
+                </button>
               </section>
             ))}
           </div>
