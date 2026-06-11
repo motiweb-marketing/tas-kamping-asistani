@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { SECTION_LABELS } from '@/lib/camp-slots';
 import type { CampaignSettings } from '@/types';
@@ -35,6 +35,7 @@ export default function CampSettingsPage() {
   const [generating, setGenerating] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
+  const editingCount = useRef(0);
 
   const load = useCallback(async () => {
     const [campRes, daysRes, settingsRes] = await Promise.all([
@@ -48,19 +49,21 @@ export default function CampSettingsPage() {
 
     if (campRes.ok && campData.campaign) {
       setCampaign(campData.campaign);
-      setDates({
-        start_date: campData.campaign.start_date,
-        end_date: campData.campaign.end_date,
-      });
+      if (editingCount.current === 0) {
+        setDates({
+          start_date: campData.campaign.start_date,
+          end_date: campData.campaign.end_date,
+        });
+      }
     }
-    setDays(daysData.days || []);
+    if (editingCount.current === 0) {
+      setDays(daysData.days || []);
+    }
     if (settingsRes.ok) setApiSettings(settingsData);
   }, []);
 
   useEffect(() => {
     load();
-    const interval = setInterval(load, 4000);
-    return () => clearInterval(interval);
   }, [load]);
 
   async function saveDates(e: React.FormEvent) {
@@ -224,7 +227,11 @@ export default function CampSettingsPage() {
                       <textarea
                         value={card[key]}
                         onChange={(e) => updateField(card.date, key, e.target.value)}
-                        onBlur={() => handleBlur(card.date)}
+                        onFocus={() => { editingCount.current += 1; }}
+                        onBlur={() => {
+                          editingCount.current = Math.max(0, editingCount.current - 1);
+                          handleBlur(card.date);
+                        }}
                         placeholder={`${label} tarifi / menü...`}
                         rows={3}
                         className="w-full rounded-lg border-2 border-gray-200 px-3 py-2 text-base focus:border-emerald-500 focus:outline-none"
