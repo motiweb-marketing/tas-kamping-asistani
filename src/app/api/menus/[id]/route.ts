@@ -14,9 +14,8 @@ export async function PATCH(
   const body = await request.json();
   const updates: Record<string, unknown> = {};
 
-  if (body.day !== undefined) updates.day = body.day;
-  if (body.meal_type !== undefined) updates.meal_type = body.meal_type;
   if (body.description !== undefined) updates.description = String(body.description).trim();
+  if (body.entry_kind !== undefined) updates.entry_kind = body.entry_kind;
 
   if (!Object.keys(updates).length) {
     return NextResponse.json({ error: 'Güncellenecek alan yok' }, { status: 400 });

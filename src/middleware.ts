@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getIronSession } from 'iron-session';
 import { sessionOptions, SessionData } from '@/lib/session';
 
-const protectedPaths = ['/items', '/my-tent', '/budget', '/chat', '/duties', '/admin'];
+const protectedPaths = ['/items', '/my-tent', '/budget', '/chat', '/duties', '/menu', '/admin'];
 const authPaths = ['/login'];
 
 function homeForRole(role?: string): string {
@@ -42,6 +42,7 @@ export const config = {
     '/budget/:path*',
     '/chat/:path*',
     '/duties/:path*',
+    '/menu/:path*',
     '/admin/:path*',
     '/login',
     '/login/:path*',

@@ -31,6 +31,6 @@ export type {
   CampDutyWithRelations,
 } from './app';
 
-export type { DutyPeriod, DutyKind, CampDuty } from './database';
+export type { DutyPeriod, DutyKind, CampDuty, MealPeriod, MenuEntryKind } from './database';
 
 export type { Database } from './supabase';

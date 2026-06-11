@@ -10,9 +10,23 @@ interface PromptParams {
 
 export function buildSystemPrompt(params: PromptParams): string {
   const menuText = params.menuDetails
+    .filter((m) => m.description?.trim())
     .map((m) => {
-      const meal = m.meal_type === 'breakfast' ? 'Kahvaltı' : 'Akşam Yemeği';
-      return `${m.day} - ${meal}: ${m.description}`;
+      const period =
+        m.period === 'breakfast' || m.meal_type === 'breakfast'
+          ? 'Sabah'
+          : 'Akşam';
+      const kind =
+        m.entry_kind === 'snack'
+          ? 'Ara Öğün'
+          : m.entry_kind === 'meal'
+            ? 'Yemek'
+            : m.entry_kind === 'breakfast'
+              ? 'Kahvaltı'
+              : m.meal_type === 'breakfast'
+                ? 'Kahvaltı'
+                : 'Yemek';
+      return `${m.day} ${period} (${kind}): ${m.description}`;
     })
     .join('\n');
 

@@ -16,7 +16,10 @@ export async function POST() {
     supabase.from('campaigns').select('openrouter_api_key').eq('id', campaignId).single(),
     supabase.from('users').select('age').eq('campaign_id', campaignId),
     supabase.from('tents').select('id').eq('campaign_id', campaignId),
-    supabase.from('menus').select('day, meal_type, description').eq('campaign_id', campaignId),
+    supabase
+      .from('menus')
+      .select('day, meal_type, period, entry_kind, description')
+      .eq('campaign_id', campaignId),
   ]);
 
   const apiKey = campaignRes.data?.openrouter_api_key;
@@ -29,10 +32,10 @@ export async function POST() {
 
   const users = usersRes.data || [];
   const tents = tentsRes.data || [];
-  const menus = menusRes.data || [];
+  const menus = (menusRes.data || []).filter((m) => m.description?.trim());
 
   if (!menus.length) {
-    return NextResponse.json({ error: 'Önce menü girin' }, { status: 400 });
+    return NextResponse.json({ error: 'Önce menü tariflerini girin' }, { status: 400 });
   }
 
   const adultCount = users.filter((u) => u.age >= 15).length;

@@ -24,7 +24,7 @@ export default async function AdminPage() {
   const stats = [
     { label: 'Çadır', value: tents.count || 0 },
     { label: 'Kişi', value: users.count || 0 },
-    { label: 'Menü Günü', value: menus.count || 0 },
+    { label: 'Öğün Kaydı', value: menus.count || 0 },
     { label: 'Malzeme', value: items.count || 0 },
   ];
 

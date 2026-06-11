@@ -14,7 +14,7 @@ export default async function AdminLayout({
   const links = [
     { href: '/admin', label: 'Panel' },
     { href: '/admin/tents', label: 'Çadırlar & Kişiler' },
-    { href: '/admin/menu', label: 'Menü' },
+    { href: '/admin/camp-settings', label: 'Kamp Ayarları' },
     { href: '/admin/duties', label: 'Kamp Planı' },
     { href: '/admin/items-review', label: 'Liste Review' },
     { href: '/admin/settings', label: 'Ayarlar' },

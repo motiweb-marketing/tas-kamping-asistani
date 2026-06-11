@@ -5,6 +5,8 @@
 
 export type UserRole = 'admin' | 'user';
 export type MealType = 'breakfast' | 'dinner';
+export type MealPeriod = 'breakfast' | 'dinner';
+export type MenuEntryKind = 'breakfast' | 'meal' | 'snack';
 export type ItemCategory = 'food' | 'equipment';
 export type DutyPeriod = 'breakfast' | 'dinner';
 export type DutyKind = 'meal_prep' | 'fire' | 'tea' | 'dishes';
@@ -51,6 +53,11 @@ export interface Menu {
   day: string;
   meal_type: MealType;
   description: string;
+  camp_day_number: number | null;
+  period: MealPeriod | null;
+  entry_kind: MenuEntryKind | null;
+  is_departure: boolean;
+  sort_order: number;
   created_at: string;
 }
 
@@ -88,6 +95,8 @@ export interface AiGeneratedItem {
 export interface MenuSummaryLine {
   day: string;
   meal_type: MealType;
+  period?: MealPeriod | null;
+  entry_kind?: MenuEntryKind | null;
   description: string;
 }
 
