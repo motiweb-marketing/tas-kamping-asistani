@@ -38,25 +38,31 @@ function Invoke-WithRetry {
         [scriptblock]$OnFailure
     )
 
+    $prevEap = $ErrorActionPreference
+    $ErrorActionPreference = "Continue"
+
     for ($i = 1; $i -le $MaxRetries; $i++) {
-        try {
-            Write-Step "$Label (deneme $i/$MaxRetries)..."
-            & $Action
-            if ($LASTEXITCODE -ne 0 -and $null -ne $LASTEXITCODE) {
-                throw "Cikis kodu: $LASTEXITCODE"
-            }
+        Write-Step "$Label (deneme $i/$MaxRetries)..."
+        $result = & $Action
+        $exitCode = if ($null -ne $result -and $result -is [int]) { $result } else { $LASTEXITCODE }
+
+        if ($exitCode -eq 0) {
+            $ErrorActionPreference = $prevEap
             return $true
-        } catch {
-            Write-Host "  HATA: $_" -ForegroundColor Red
-            if ($i -lt $MaxRetries -and $OnFailure) {
-                Write-Host "  Duzeltme deneniyor..." -ForegroundColor Yellow
-                & $OnFailure
-                Start-Sleep -Seconds 2
-            } elseif ($i -eq $MaxRetries) {
-                throw "$Label $MaxRetries denemeden sonra basarisiz: $_"
-            }
+        }
+
+        Write-Host "  HATA: Cikis kodu $exitCode" -ForegroundColor Red
+        if ($i -lt $MaxRetries -and $OnFailure) {
+            Write-Host "  Duzeltme deneniyor..." -ForegroundColor Yellow
+            & $OnFailure
+            Start-Sleep -Seconds 2
+        } elseif ($i -eq $MaxRetries) {
+            $ErrorActionPreference = $prevEap
+            throw "$Label $MaxRetries denemeden sonra basarisiz (kod: $exitCode)"
         }
     }
+
+    $ErrorActionPreference = $prevEap
     return $false
 }
 
@@ -84,14 +90,14 @@ function Push-GitHub {
     if ($status) {
         Write-Step "Git: commit -> $Message"
         git -c "user.email=$GitEmail" -c "user.name=$GitName" commit -m $Message
-        if ($LASTEXITCODE -ne 0) { throw "Git commit basarisiz" }
+        if ($LASTEXITCODE -ne 0) { return $LASTEXITCODE }
     } else {
         Write-Host "Git: commit edilecek degisiklik yok." -ForegroundColor Yellow
     }
 
     $PushUrl = "https://${Token}@github.com/motiweb-marketing/tas-kamping-asistani.git"
-    git push $PushUrl $Branch 2>&1 | Out-String | Write-Host
-    if ($LASTEXITCODE -ne 0) { throw "Git push basarisiz" }
+    git push $PushUrl $Branch 2>&1 | ForEach-Object { Write-Host $_ }
+    return $LASTEXITCODE
 }
 
 function Fix-GitPush {
@@ -103,17 +109,20 @@ function Fix-GitPush {
 
 function Test-Build {
     Write-Step "Build kontrolu (npm run build)..."
-    npm run build 2>&1 | Out-String | Write-Host
-    if ($LASTEXITCODE -ne 0) { throw "Build basarisiz" }
+    npm run build 2>&1 | ForEach-Object { Write-Host $_ }
+    return $LASTEXITCODE
 }
 
 function Deploy-Vercel {
     $VercelToken = $env:VERCEL_TOKEN
-    if (-not $VercelToken) { throw "VERCEL_TOKEN bulunamadi (scripts/push.config.local)" }
+    if (-not $VercelToken) {
+        Write-Host "VERCEL_TOKEN bulunamadi" -ForegroundColor Red
+        return 1
+    }
 
     $vercelArgs = @("deploy", "--prod", "--yes", "--token", $VercelToken)
-    npx vercel @vercelArgs 2>&1 | Out-String | Write-Host
-    if ($LASTEXITCODE -ne 0) { throw "Vercel deploy basarisiz" }
+    npx vercel @vercelArgs 2>&1 | ForEach-Object { Write-Host $_ }
+    return $LASTEXITCODE
 }
 
 function Fix-VercelDeploy {
@@ -132,7 +141,8 @@ try {
     Write-Host "GitHub push basarili." -ForegroundColor Green
 
     Invoke-WithRetry -Label "Vercel Deploy" -Action {
-        Test-Build
+        $buildCode = Test-Build
+        if ($buildCode -ne 0) { return $buildCode }
         Deploy-Vercel
     } -OnFailure { Fix-VercelDeploy }
 
