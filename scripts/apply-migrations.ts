@@ -3,7 +3,7 @@ import { existsSync, readFileSync } from 'fs';
 import { resolve } from 'path';
 import pg from 'pg';
 
-dns.setDefaultResultOrder('ipv6first');
+dns.setDefaultResultOrder('ipv4first');
 
 const { Client } = pg;
 
@@ -43,16 +43,34 @@ function loadEnv() {
   return { ref, password };
 }
 
+async function connectClient(ref: string, password: string) {
+  const encoded = encodeURIComponent(password);
+  const candidates = [
+    `postgresql://postgres:${encoded}@db.${ref}.supabase.co:5432/postgres`,
+    `postgresql://postgres.${ref}:${encoded}@aws-0-eu-central-1.pooler.supabase.com:5432/postgres`,
+    `postgresql://postgres.${ref}:${encoded}@aws-0-eu-west-1.pooler.supabase.com:5432/postgres`,
+    `postgresql://postgres:${encoded}@[2a05:d018:cb7:ae00:153:b087:f3be:b36c]:5432/postgres`,
+  ];
+
+  let lastErr: unknown;
+  for (const connectionString of candidates) {
+    const client = new Client({ connectionString, ssl: { rejectUnauthorized: false } });
+    try {
+      await client.connect();
+      console.log('DB baglantisi:', connectionString.replace(encoded, '***'));
+      return client;
+    } catch (e) {
+      lastErr = e;
+      await client.end().catch(() => undefined);
+    }
+  }
+  throw lastErr;
+}
+
 async function main() {
   const { ref, password } = loadEnv();
-  const encoded = encodeURIComponent(password);
-  const client = new Client({
-    connectionString: `postgresql://postgres:${encoded}@[2a05:d018:cb7:ae00:153:b087:f3be:b36c]:5432/postgres`,
-    ssl: { rejectUnauthorized: false },
-  });
-
-  await client.connect();
-  const files = ['003_camp_duties.sql', '004_menu_slots.sql'];
+  const client = await connectClient(ref, password);
+  const files = ['003_camp_duties.sql', '004_menu_slots.sql', '005_menu_ai_prompt.sql'];
 
   for (const file of files) {
     const sql = readFileSync(resolve('supabase/migrations', file), 'utf-8');

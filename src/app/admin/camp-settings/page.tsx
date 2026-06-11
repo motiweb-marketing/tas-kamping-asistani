@@ -30,8 +30,13 @@ export default function CampSettingsPage() {
   } | null>(null);
   const [dates, setDates] = useState({ start_date: '', end_date: '' });
   const [days, setDays] = useState<DayCard[]>([]);
+  const [publishedDays, setPublishedDays] = useState<DayCard[] | null>(null);
+  const [menuAiPrompt, setMenuAiPrompt] = useState('');
+  const [isPublished, setIsPublished] = useState(false);
   const [apiSettings, setApiSettings] = useState<CampaignSettings | null>(null);
   const [savingDates, setSavingDates] = useState(false);
+  const [savingPrompt, setSavingPrompt] = useState(false);
+  const [publishing, setPublishing] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
@@ -54,10 +59,15 @@ export default function CampSettingsPage() {
           start_date: campData.campaign.start_date,
           end_date: campData.campaign.end_date,
         });
+        if (daysData.menu_ai_prompt !== undefined) {
+          setMenuAiPrompt(daysData.menu_ai_prompt || '');
+        }
       }
     }
     if (editingCount.current === 0) {
       setDays(daysData.days || []);
+      setPublishedDays(daysData.published_days || null);
+      setIsPublished(!!daysData.is_published);
     }
     if (settingsRes.ok) setApiSettings(settingsData);
   }, []);
@@ -92,12 +102,36 @@ export default function CampSettingsPage() {
     load();
   }
 
-  async function saveDay(card: DayCard) {
+  async function saveAiPrompt() {
+    setSavingPrompt(true);
     setError('');
+    const res = await fetch('/api/admin/campaign', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ menu_ai_prompt: menuAiPrompt }),
+    });
+    setSavingPrompt(false);
+    if (!res.ok) {
+      const data = await res.json();
+      setError(data.error || 'Prompt kaydedilemedi');
+      return;
+    }
+    setMessage('AI talimatı kaydedildi.');
+  }
+
+  async function saveDay(card: DayCard) {
     const res = await fetch('/api/menus/day', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(card),
+      body: JSON.stringify({
+        day: card.date,
+        camp_day_number: card.camp_day_number,
+        is_arrival: card.is_arrival,
+        is_departure: card.is_departure,
+        breakfast: card.breakfast,
+        meal: card.meal,
+        snack: card.snack,
+      }),
     });
     if (!res.ok) {
       const data = await res.json();
@@ -119,14 +153,31 @@ export default function CampSettingsPage() {
     });
   }
 
+  async function publishMenu() {
+    setPublishing(true);
+    setError('');
+    setMessage('');
+    const res = await fetch('/api/ai/publish-menu', { method: 'POST' });
+    const data = await res.json();
+    setPublishing(false);
+    if (!res.ok) {
+      setError(data.error || 'Menü yayınlanamadı');
+      return;
+    }
+    setPublishedDays(data.days);
+    setIsPublished(true);
+    setMessage('Menü AI ile düzenlendi ve katılımcılara yayınlandı.');
+  }
+
   async function generateList() {
     setGenerating(true);
     setMessage('');
+    setError('');
     const res = await fetch('/api/ai/generate-items', { method: 'POST' });
     const data = await res.json();
     setGenerating(false);
     if (!res.ok) {
-      setMessage(data.error || 'Hata oluştu');
+      setError(data.error || 'Hata oluştu');
       return;
     }
     setMessage(`${data.count} malzeme oluşturuldu. Review ekranından kontrol edin.`);
@@ -147,8 +198,8 @@ export default function CampSettingsPage() {
       <div>
         <h2 className="text-xl font-bold">Kamp Ayarları</h2>
         <p className="mt-1 text-base text-gray-600">
-          Her gün için kahvaltı, akşam yemeği ve ara öğün planını girin. Varış gününde
-          yalnızca akşam, ayrılış gününde yalnızca kahvaltı vardır.
+          Ham menü notlarını girin, AI talimatı verin, ardından menüyü yayınlayın.
+          Katılımcılar yayınlanmış menüyü görür.
         </p>
       </div>
 
@@ -200,57 +251,120 @@ export default function CampSettingsPage() {
         </button>
       </form>
 
-      {days.length === 0 ? (
-        <p className="text-gray-500">Geçerli kamp tarihi girin ve kaydedin.</p>
-      ) : (
-        <div className="grid gap-4 lg:grid-cols-2">
-          {days.map((card) => (
-            <section
-              key={card.date}
-              className={`rounded-xl border-2 p-4 ${
-                card.is_departure
-                  ? 'border-amber-300 bg-amber-50'
-                  : card.is_arrival
-                    ? 'border-blue-200 bg-blue-50'
-                    : 'border-gray-200 bg-white'
-              }`}
-            >
-              <h3 className="text-lg font-semibold text-emerald-900">{card.title}</h3>
+      <div className="rounded-xl border-2 border-purple-200 bg-purple-50 p-4">
+        <h3 className="mb-2 text-lg font-semibold text-purple-900">AI Menü Talimatı</h3>
+        <p className="mb-3 text-sm text-purple-800">
+          AI ham notlarınızı bu talimatlara göre düzenleyip katılımcılara sunar.
+        </p>
+        <textarea
+          value={menuAiPrompt}
+          onChange={(e) => setMenuAiPrompt(e.target.value)}
+          onFocus={() => { editingCount.current += 1; }}
+          onBlur={() => {
+            editingCount.current = Math.max(0, editingCount.current - 1);
+            void saveAiPrompt();
+          }}
+          placeholder="Örn: Menüleri aile dostu ve net yaz. Vejetaryen seçenekleri belirt. Porsiyonları 12 kişi için hesapla..."
+          rows={4}
+          className="w-full rounded-lg border-2 border-purple-200 px-3 py-2 text-base"
+        />
+        <button
+          type="button"
+          onClick={saveAiPrompt}
+          disabled={savingPrompt}
+          className="mt-3 min-h-[44px] rounded-lg bg-purple-600 px-4 text-base font-semibold text-white disabled:opacity-50"
+        >
+          {savingPrompt ? 'Kaydediliyor...' : 'Talimatı Kaydet'}
+        </button>
+      </div>
 
-              <div className="mt-4 flex flex-col gap-4">
-                {sections.map(({ key, show, label }) =>
-                  card[show] ? (
-                    <div key={key}>
-                      <label className="mb-1 block text-sm font-semibold text-gray-700">
-                        {label}
-                      </label>
-                      <textarea
-                        value={card[key]}
-                        onChange={(e) => updateField(card.date, key, e.target.value)}
-                        onFocus={() => { editingCount.current += 1; }}
-                        onBlur={() => {
-                          editingCount.current = Math.max(0, editingCount.current - 1);
-                          handleBlur(card.date);
-                        }}
-                        placeholder={`${label} tarifi / menü...`}
-                        rows={3}
-                        className="w-full rounded-lg border-2 border-gray-200 px-3 py-2 text-base focus:border-emerald-500 focus:outline-none"
-                      />
-                    </div>
-                  ) : null
-                )}
-              </div>
-            </section>
-          ))}
-        </div>
-      )}
+      <div>
+        <h3 className="mb-2 text-lg font-semibold">Ham Menü Notları</h3>
+        {days.length === 0 ? (
+          <p className="text-gray-500">Geçerli kamp tarihi girin ve kaydedin.</p>
+        ) : (
+          <div className="grid gap-4 lg:grid-cols-2">
+            {days.map((card) => (
+              <section
+                key={card.date}
+                className={`rounded-xl border-2 p-4 ${
+                  card.is_departure
+                    ? 'border-amber-300 bg-amber-50'
+                    : card.is_arrival
+                      ? 'border-blue-200 bg-blue-50'
+                      : 'border-gray-200 bg-white'
+                }`}
+              >
+                <h4 className="text-lg font-semibold text-emerald-900">{card.title}</h4>
+                <div className="mt-4 flex flex-col gap-4">
+                  {sections.map(({ key, show, label }) =>
+                    card[show] ? (
+                      <div key={key}>
+                        <label className="mb-1 block text-sm font-semibold text-gray-700">
+                          {label}
+                        </label>
+                        <textarea
+                          value={card[key]}
+                          onChange={(e) => updateField(card.date, key, e.target.value)}
+                          onFocus={() => { editingCount.current += 1; }}
+                          onBlur={() => {
+                            editingCount.current = Math.max(0, editingCount.current - 1);
+                            handleBlur(card.date);
+                          }}
+                          placeholder={`${label} notları...`}
+                          rows={3}
+                          className="w-full rounded-lg border-2 border-gray-200 px-3 py-2 text-base focus:border-emerald-500 focus:outline-none"
+                        />
+                      </div>
+                    ) : null
+                  )}
+                </div>
+              </section>
+            ))}
+          </div>
+        )}
+      </div>
 
       {!apiSettings?.configured && (
         <div className="rounded-xl bg-amber-100 p-4 text-lg text-amber-900">
-          AI listesi için OpenRouter API anahtarını girin.{' '}
+          AI için OpenRouter API anahtarını girin.{' '}
           <Link href="/admin/settings" className="font-semibold underline">
             Ayarlar →
           </Link>
+        </div>
+      )}
+
+      <button
+        onClick={publishMenu}
+        disabled={publishing || !hasMenuContent || !apiSettings?.configured}
+        className="min-h-[52px] rounded-xl bg-purple-600 text-lg font-semibold text-white disabled:opacity-50"
+      >
+        {publishing ? 'AI Menüyü Düzenliyor...' : 'Menüyü AI ile Düzenle ve Yayınla'}
+      </button>
+
+      {isPublished && publishedDays && (
+        <div>
+          <h3 className="mb-2 text-lg font-semibold text-emerald-800">
+            Yayınlanan Menü (katılımcıların gördüğü)
+          </h3>
+          <div className="grid gap-4 lg:grid-cols-2">
+            {publishedDays.map((card) => (
+              <section key={card.date} className="rounded-xl border-2 border-emerald-200 bg-emerald-50 p-4">
+                <h4 className="font-semibold text-emerald-900">{card.title}</h4>
+                <div className="mt-2 space-y-2 text-base text-gray-800">
+                  {card.show_breakfast && card.breakfast.trim() && (
+                    <p><strong>Kahvaltı:</strong> {card.breakfast}</p>
+                  )}
+                  {card.show_meal && card.meal.trim() && (
+                    <p><strong>Yemek:</strong> {card.meal}</p>
+                  )}
+                  {card.show_snack && card.snack.trim() && (
+                    <p><strong>Ara Öğün:</strong> {card.snack}</p>
+                  )}
+                </div>
+              </section>
+            ))}
+          </div>
         </div>
       )}
 
@@ -259,7 +373,7 @@ export default function CampSettingsPage() {
         disabled={generating || !hasMenuContent || !apiSettings?.configured}
         className="min-h-[52px] rounded-xl bg-blue-600 text-lg font-semibold text-white disabled:opacity-50"
       >
-        {generating ? 'AI Listesi Oluşturuluyor...' : 'Listeyi Oluştur (AI)'}
+        {generating ? 'AI Listesi Oluşturuluyor...' : 'Alışveriş Listesini Oluştur (AI)'}
       </button>
     </div>
   );

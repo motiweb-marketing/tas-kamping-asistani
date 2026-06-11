@@ -1,5 +1,11 @@
 import type { AiGeneratedItem, MenuSummaryLine } from '@/types';
 
+const OPENROUTER_HEADERS = {
+  'Content-Type': 'application/json',
+  'HTTP-Referer': process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000',
+  'X-Title': 'Tas Kamping Asistani',
+} as const;
+
 interface PromptParams {
   totalPeople: number;
   adultCount: number;
@@ -46,10 +52,49 @@ Sadece JSON formatında dönecek bir liste ver. Her öğe şu formatta olmalı: 
 Yanıtın SADECE JSON array olmalı, başka metin ekleme.`;
 }
 
-export async function callOpenRouter(
+export interface RawDayMenuInput {
+  date: string;
+  title: string;
+  show_breakfast: boolean;
+  show_meal: boolean;
+  show_snack: boolean;
+  breakfast: string;
+  meal: string;
+  snack: string;
+}
+
+export function buildMenuPublishPrompt(
+  rawDays: RawDayMenuInput[],
+  adminInstructions: string
+): string {
+  const filled = rawDays.filter(
+    (d) => d.breakfast.trim() || d.meal.trim() || d.snack.trim()
+  );
+
+  return `Sen kamp menüsü editörüsün. Adminin ham notlarını katılımcılar için düzenli, sıcak ve okunaklı bir menüye çevir.
+
+ADMIN TALİMATLARI:
+${adminInstructions.trim() || 'Ham notları net, samimi ve anlaşılır Türkçe ile düzenle. Malzemeleri ve yemekleri madde madde yaz.'}
+
+HAM MENÜ (JSON):
+${JSON.stringify(filled, null, 2)}
+
+Kurallar:
+- Her günün date alanını aynen koru
+- show_breakfast, show_meal, show_snack alanlarını aynen koru
+- Sadece breakfast, meal, snack metinlerini düzenle
+- Boş alanları "" bırak
+- title alanını aynen koru
+
+Yanıtın SADECE JSON array olmalı. Format:
+[{"date":"YYYY-MM-DD","title":"...","show_breakfast":true,"show_meal":false,"show_snack":false,"breakfast":"","meal":"...","snack":""}]`;
+}
+
+async function callOpenRouterRaw(
   systemPrompt: string,
+  userMessage: string,
   apiKey: string
-): Promise<AiGeneratedItem[]> {
+): Promise<string> {
   if (!apiKey?.trim()) {
     throw new Error('OpenRouter API anahtarı tanımlı değil. Admin → Ayarlar sayfasından girin.');
   }
@@ -58,17 +103,15 @@ export async function callOpenRouter(
     method: 'POST',
     headers: {
       Authorization: `Bearer ${apiKey}`,
-      'Content-Type': 'application/json',
-      'HTTP-Referer': process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000',
-      'X-Title': 'Taş Kamping Asistanı',
+      ...OPENROUTER_HEADERS,
     },
     body: JSON.stringify({
       model: 'openai/gpt-4o-mini',
       messages: [
         { role: 'system', content: systemPrompt },
-        { role: 'user', content: 'Alışveriş listesini JSON array olarak oluştur.' },
+        { role: 'user', content: userMessage },
       ],
-      temperature: 0.3,
+      temperature: 0.4,
     }),
   });
 
@@ -78,7 +121,18 @@ export async function callOpenRouter(
   }
 
   const data = await res.json();
-  const content = data.choices?.[0]?.message?.content || '[]';
+  return data.choices?.[0]?.message?.content || '';
+}
+
+export async function callOpenRouter(
+  systemPrompt: string,
+  apiKey: string
+): Promise<AiGeneratedItem[]> {
+  const content = await callOpenRouterRaw(
+    systemPrompt,
+    'Alışveriş listesini JSON array olarak oluştur.',
+    apiKey
+  );
 
   const jsonMatch = content.match(/\[[\s\S]*\]/);
   if (!jsonMatch) {
@@ -92,4 +146,22 @@ export async function callOpenRouter(
     quantity: String(item.quantity),
     category: item.category === 'equipment' ? 'equipment' : 'food',
   }));
+}
+
+export async function callOpenRouterMenuPublish(
+  systemPrompt: string,
+  apiKey: string
+): Promise<RawDayMenuInput[]> {
+  const content = await callOpenRouterRaw(
+    systemPrompt,
+    'Menüyü JSON array olarak döndür.',
+    apiKey
+  );
+
+  const jsonMatch = content.match(/\[[\s\S]*\]/);
+  if (!jsonMatch) {
+    throw new Error('AI menü yanıtı JSON formatında değil');
+  }
+
+  return JSON.parse(jsonMatch[0]) as RawDayMenuInput[];
 }

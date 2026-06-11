@@ -19,6 +19,8 @@ export interface Campaign {
   end_date: string;
   admin_id: string | null;
   openrouter_api_key: string | null;
+  menu_ai_prompt: string | null;
+  published_menu: string | null;
   created_at: string;
 }
 

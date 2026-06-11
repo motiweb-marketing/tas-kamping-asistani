@@ -19,6 +19,7 @@ interface DayCard {
 export default function MenuPage() {
   const [days, setDays] = useState<DayCard[]>([]);
   const [campaignName, setCampaignName] = useState('');
+  const [isPublished, setIsPublished] = useState(false);
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
@@ -33,6 +34,7 @@ export default function MenuPage() {
       setCampaignName(campData.campaign.name);
     }
     setDays(daysData.days || []);
+    setIsPublished(!!daysData.is_published);
     setLoading(false);
   }, []);
 
@@ -65,7 +67,9 @@ export default function MenuPage() {
         </p>
       ) : !hasContent ? (
         <p className="text-lg text-gray-500">
-          Henüz menü girilmedi. Organizatör Kamp Ayarlarından ekleyecek.
+          {isPublished
+            ? 'Henüz menü girilmedi.'
+            : 'Organizatör henüz menüyü yayınlamadı. Ham notlar hazır olunca AI ile yayınlanacak.'}
         </p>
       ) : (
         <div className="grid gap-4 lg:grid-cols-2">
