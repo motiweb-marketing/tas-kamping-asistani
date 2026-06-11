@@ -113,23 +113,34 @@ function Test-Build {
     return $LASTEXITCODE
 }
 
+function Get-VercelArgs {
+    param([string[]]$Extra)
+    $args = @("--yes", "--token", $env:VERCEL_TOKEN) + $Extra
+    if ($env:VERCEL_SCOPE) { $args += @("--scope", $env:VERCEL_SCOPE) }
+    return $args
+}
+
 function Deploy-Vercel {
-    $VercelToken = $env:VERCEL_TOKEN
-    if (-not $VercelToken) {
+    if (-not $env:VERCEL_TOKEN) {
         Write-Host "VERCEL_TOKEN bulunamadi" -ForegroundColor Red
         return 1
     }
 
-    $vercelArgs = @("deploy", "--prod", "--yes", "--token", $VercelToken)
+    $vercelArgs = Get-VercelArgs @("deploy", "--prod")
     npx vercel @vercelArgs 2>&1 | ForEach-Object { Write-Host $_ }
     return $LASTEXITCODE
 }
 
 function Fix-VercelDeploy {
+    if (-not (Test-Path ".vercel/project.json")) {
+        Write-Host "  Vercel projesi linkleniyor..." -ForegroundColor Yellow
+        $linkArgs = Get-VercelArgs @("link", "--project", "tas-kamping-asistani")
+        npx vercel @linkArgs 2>&1 | ForEach-Object { Write-Host $_ }
+    }
+
     Write-Host "  node_modules ve .next temizleniyor..." -ForegroundColor Yellow
     if (Test-Path ".next") { Remove-Item -Recurse -Force ".next" }
-    npm install 2>&1 | Out-String | Write-Host
-    Test-Build
+    npm install 2>&1 | ForEach-Object { Write-Host $_ }
 }
 
 Write-Host ""

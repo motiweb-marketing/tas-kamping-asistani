@@ -5,6 +5,8 @@ GITHUB_TOKEN=ghp_xxxxxxxxxxxxxxxxxxxx
 
 # Vercel — https://vercel.com/account/tokens (doğrudan deploy için)
 VERCEL_TOKEN=xxxxxxxxxxxxxxxxxxxx
+# Vercel team/slug (vercel teams ls ile görebilirsiniz)
+VERCEL_SCOPE=your-team-slug
 
 # Git commit bilgileri
 GIT_USER_EMAIL=seo.okacar@gmail.com
