@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { formatTitleCase } from '@/lib/format';
 import { getSession } from '@/lib/session';
 import { createServerClient } from '@/lib/supabase/server';
 
@@ -28,7 +29,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Yetkisiz' }, { status: 403 });
   }
 
-  const { name } = await request.json();
+  const { name: rawName } = await request.json();
+  const name = formatTitleCase(String(rawName || ''));
   if (!name) {
     return NextResponse.json({ error: 'Çadır adı gerekli' }, { status: 400 });
   }

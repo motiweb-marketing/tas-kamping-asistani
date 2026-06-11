@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { hashPassword } from '@/lib/auth';
+import { formatPersonName, formatTitleCase } from '@/lib/format';
 import { getSession } from '@/lib/session';
 import { createServerClient } from '@/lib/supabase/server';
 
@@ -26,7 +27,13 @@ export async function POST(request: NextRequest) {
 
     const { data: campaign, error: campaignError } = await supabase
       .from('campaigns')
-      .insert({ name, location, start_date, end_date, admin_id: null })
+      .insert({
+        name: formatTitleCase(name),
+        location: formatTitleCase(location),
+        start_date,
+        end_date,
+        admin_id: null,
+      })
       .select()
       .single();
 
@@ -38,7 +45,7 @@ export async function POST(request: NextRequest) {
       .from('users')
       .insert({
         campaign_id: campaign.id,
-        name: admin_name,
+        name: formatPersonName(admin_name),
         age: admin_age || 30,
         role: 'admin',
         username: admin_username,

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { hashPassword } from '@/lib/auth';
+import { formatPersonName } from '@/lib/format';
 import { getSession } from '@/lib/session';
 import { createServerClient } from '@/lib/supabase/server';
 
@@ -43,7 +44,7 @@ export async function POST(request: NextRequest) {
     .from('users')
     .insert({
       campaign_id: session.user.campaign_id,
-      name,
+      name: formatPersonName(name),
       age: age || 30,
       tent_id: tent_id || null,
       username,
