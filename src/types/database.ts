@@ -6,6 +6,8 @@
 export type UserRole = 'admin' | 'user';
 export type MealType = 'breakfast' | 'dinner';
 export type ItemCategory = 'food' | 'equipment';
+export type DutyPeriod = 'breakfast' | 'dinner';
+export type DutyKind = 'meal_prep' | 'fire' | 'tea' | 'dishes';
 
 export interface Campaign {
   id: string;
@@ -87,4 +89,19 @@ export interface MenuSummaryLine {
   day: string;
   meal_type: MealType;
   description: string;
+}
+
+export interface CampDuty {
+  id: string;
+  campaign_id: string;
+  camp_day_number: number;
+  slot_date: string;
+  period: DutyPeriod;
+  duty_kind: DutyKind;
+  title: string;
+  is_departure: boolean;
+  assigned_tent_id: string | null;
+  assigned_user_id: string | null;
+  release_requested: boolean;
+  created_at: string;
 }

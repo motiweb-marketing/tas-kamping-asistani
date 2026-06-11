@@ -1,4 +1,5 @@
 import type {
+  CampDuty,
   Campaign,
   ChatMessage,
   Item,
@@ -69,9 +70,15 @@ export interface CreateCampaignInput {
   start_date: string;
   end_date: string;
   admin_name: string;
+  admin_tent_name: string;
   admin_username: string;
   admin_password: string;
   admin_age: number;
+}
+
+export interface CampDutyWithRelations extends CampDuty {
+  assigned_tent?: Pick<Tent, 'id' | 'name'> | null;
+  assigned_user?: Pick<SafeUser, 'id' | 'name' | 'role'> | null;
 }
 
 export interface CreateUserInput {

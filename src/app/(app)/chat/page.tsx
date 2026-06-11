@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { createBrowserClient } from '@/lib/supabase/client';
 import ChatBubble from '@/components/chat/ChatBubble';
 import type { ChatMessageWithUser, SessionUser } from '@/types';
@@ -12,20 +12,23 @@ export default function ChatPage() {
   const [sending, setSending] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
 
+  const fetchMessages = useCallback(async () => {
+    const res = await fetch('/api/chat', { cache: 'no-store' });
+    const data = await res.json();
+    if (data.messages) setMessages(data.messages);
+  }, []);
+
   useEffect(() => {
     async function init() {
       const meRes = await fetch('/api/auth/me');
       const meData = await meRes.json();
       setUser(meData.user);
-
-      const res = await fetch('/api/chat');
-      const data = await res.json();
-      setMessages(data.messages || []);
+      await fetchMessages();
 
       if (meData.user?.campaign_id) {
         const supabase = createBrowserClient();
         const channel = supabase
-          .channel(`chat-${meData.user.campaign_id}`)
+          .channel(`chat-${meData.user.campaign_id}-${Date.now()}`)
           .on(
             'postgres_changes',
             {
@@ -34,10 +37,8 @@ export default function ChatPage() {
               table: 'chat_messages',
               filter: `campaign_id=eq.${meData.user.campaign_id}`,
             },
-            async () => {
-              const refresh = await fetch('/api/chat');
-              const refreshData = await refresh.json();
-              setMessages(refreshData.messages || []);
+            () => {
+              fetchMessages();
             }
           )
           .subscribe();
@@ -49,10 +50,13 @@ export default function ChatPage() {
     }
 
     const cleanup = init();
+    const poll = setInterval(fetchMessages, 2000);
+
     return () => {
+      clearInterval(poll);
       cleanup.then((fn) => fn?.());
     };
-  }, []);
+  }, [fetchMessages]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -62,18 +66,27 @@ export default function ChatPage() {
     e.preventDefault();
     if (!text.trim() || sending) return;
 
+    const draft = text.trim();
     setSending(true);
+    setText('');
+
     const res = await fetch('/api/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ message: text }),
+      body: JSON.stringify({ message: draft }),
     });
 
     if (res.ok) {
-      setText('');
-      const refresh = await fetch('/api/chat');
-      const data = await refresh.json();
-      setMessages(data.messages || []);
+      const data = await res.json();
+      if (data.message) {
+        setMessages((prev) => {
+          if (prev.some((m) => m.id === data.message.id)) return prev;
+          return [...prev, data.message];
+        });
+      }
+      fetchMessages();
+    } else {
+      setText(draft);
     }
     setSending(false);
   }

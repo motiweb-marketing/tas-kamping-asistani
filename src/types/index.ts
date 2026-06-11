@@ -28,6 +28,9 @@ export type {
   CreateMenuInput,
   LoginInput,
   CampaignSettings,
+  CampDutyWithRelations,
 } from './app';
+
+export type { DutyPeriod, DutyKind, CampDuty } from './database';
 
 export type { Database } from './supabase';

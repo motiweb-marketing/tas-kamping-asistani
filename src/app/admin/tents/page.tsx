@@ -308,7 +308,11 @@ export default function AdminTentsPage() {
                 <div>
                   <p className="text-lg">
                     <strong>{u.name}</strong> ({u.age} yaş) — @{u.username}
-                    {u.role === 'admin' && <span className="ml-2 text-emerald-700">[Admin]</span>}
+                    {u.role === 'admin' && (
+                      <span className="ml-2 rounded-full bg-emerald-200 px-2 py-0.5 text-sm font-semibold text-emerald-900">
+                        Admin
+                      </span>
+                    )}
                   </p>
                   <div className="mt-2 flex gap-2">
                     <button

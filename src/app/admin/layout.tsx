@@ -15,6 +15,7 @@ export default async function AdminLayout({
     { href: '/admin', label: 'Panel' },
     { href: '/admin/tents', label: 'Çadırlar & Kişiler' },
     { href: '/admin/menu', label: 'Menü' },
+    { href: '/admin/duties', label: 'Kamp Planı' },
     { href: '/admin/items-review', label: 'Liste Review' },
     { href: '/admin/settings', label: 'Ayarlar' },
   ];

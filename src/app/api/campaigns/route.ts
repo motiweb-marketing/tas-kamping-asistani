@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { hashPassword } from '@/lib/auth';
+import { generateCampDutyPlan } from '@/lib/camp-plan';
 import { formatPersonName, formatTitleCase } from '@/lib/format';
 import { getSession } from '@/lib/session';
 import { createServerClient } from '@/lib/supabase/server';
@@ -13,13 +14,14 @@ export async function POST(request: NextRequest) {
       start_date,
       end_date,
       admin_name,
+      admin_tent_name,
       admin_username,
       admin_password,
       admin_age,
     } = body;
 
-    if (!name || !start_date || !end_date || !admin_name || !admin_username || !admin_password) {
-      return NextResponse.json({ error: 'Eksik alanlar var' }, { status: 400 });
+    if (!name || !start_date || !end_date || !admin_name || !admin_tent_name || !admin_username || !admin_password) {
+      return NextResponse.json({ error: 'Eksik alanlar var (kamp, admin adı, çadır adı, kullanıcı adı, şifre)' }, { status: 400 });
     }
 
     const supabase = createServerClient();
@@ -41,6 +43,20 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: campaignError?.message || 'Kamp oluşturulamadı' }, { status: 500 });
     }
 
+    const { data: tent, error: tentError } = await supabase
+      .from('tents')
+      .insert({
+        campaign_id: campaign.id,
+        name: formatTitleCase(admin_tent_name),
+      })
+      .select()
+      .single();
+
+    if (tentError || !tent) {
+      await supabase.from('campaigns').delete().eq('id', campaign.id);
+      return NextResponse.json({ error: tentError?.message || 'Çadır oluşturulamadı' }, { status: 500 });
+    }
+
     const { data: admin, error: adminError } = await supabase
       .from('users')
       .insert({
@@ -50,7 +66,7 @@ export async function POST(request: NextRequest) {
         role: 'admin',
         username: admin_username,
         password_hash,
-        tent_id: null,
+        tent_id: tent.id,
       })
       .select()
       .single();
@@ -62,11 +78,18 @@ export async function POST(request: NextRequest) {
 
     await supabase.from('campaigns').update({ admin_id: admin.id }).eq('id', campaign.id);
 
+    const dutyTemplates = generateCampDutyPlan(start_date, end_date);
+    if (dutyTemplates.length) {
+      await supabase.from('camp_duties').insert(
+        dutyTemplates.map((t) => ({ campaign_id: campaign.id, ...t }))
+      );
+    }
+
     const session = await getSession();
     session.user = {
       id: admin.id,
       campaign_id: campaign.id,
-      tent_id: null,
+      tent_id: tent.id,
       name: admin.name,
       age: admin.age,
       role: 'admin',

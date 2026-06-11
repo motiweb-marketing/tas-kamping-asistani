@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getIronSession } from 'iron-session';
 import { sessionOptions, SessionData } from '@/lib/session';
 
-const protectedPaths = ['/items', '/my-tent', '/budget', '/chat', '/admin'];
+const protectedPaths = ['/items', '/my-tent', '/budget', '/chat', '/duties', '/admin'];
 const authPaths = ['/login'];
 
 export async function middleware(request: NextRequest) {
@@ -31,5 +31,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/items/:path*', '/my-tent/:path*', '/budget/:path*', '/chat/:path*', '/admin/:path*', '/login'],
+  matcher: ['/items/:path*', '/my-tent/:path*', '/budget/:path*', '/chat/:path*', '/duties/:path*', '/admin/:path*', '/login'],
 };

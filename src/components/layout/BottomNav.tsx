@@ -4,8 +4,9 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
 const tabs = [
-  { href: '/items', label: 'Ana Liste', icon: '📋' },
-  { href: '/my-tent', label: 'Çadırım', icon: '⛺' },
+  { href: '/items', label: 'Liste', icon: '📋' },
+  { href: '/my-tent', label: 'Çadır', icon: '⛺' },
+  { href: '/duties', label: 'Görevler', icon: '📅' },
   { href: '/budget', label: 'Bütçe', icon: '💰' },
   { href: '/chat', label: 'Chat', icon: '💬' },
 ];

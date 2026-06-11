@@ -12,6 +12,7 @@ export default function SetupPage() {
     start_date: '',
     end_date: '',
     admin_name: '',
+    admin_tent_name: '',
     admin_username: '',
     admin_password: '',
     admin_age: '30',
@@ -46,31 +47,38 @@ export default function SetupPage() {
     router.refresh();
   }
 
+  const fields = [
+    { key: 'name', label: 'Kamp Adı', type: 'text' },
+    { key: 'location', label: 'Konum', type: 'text' },
+    { key: 'start_date', label: 'Varış Tarihi (ilk akşam yemeği)', type: 'date' },
+    { key: 'end_date', label: 'Ayrılış Tarihi (son kahvaltı)', type: 'date' },
+    { key: 'admin_name', label: 'Adınız Soyadınız', type: 'text' },
+    { key: 'admin_tent_name', label: 'Çadırınızın Adı', type: 'text' },
+    { key: 'admin_username', label: 'Kullanıcı Adınız', type: 'text' },
+    { key: 'admin_password', label: 'Şifreniz', type: 'password' },
+    { key: 'admin_age', label: 'Yaşınız', type: 'number' },
+  ];
+
   return (
     <main className="flex min-h-screen flex-col p-6 pb-12">
       <Link href="/" className="mb-6 text-lg text-emerald-700">
         ← Ana Sayfa
       </Link>
 
-      <h1 className="mb-6 text-2xl font-bold">Yeni Kamp Oluştur</h1>
+      <h1 className="mb-2 text-2xl font-bold">Yeni Kamp Oluştur</h1>
+      <p className="mb-6 text-base text-gray-600">
+        Admin de kampın bir parçasıdır — adınızı ve çadırınızı girin.
+      </p>
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-        {[
-          { key: 'name', label: 'Kamp Adı', type: 'text' },
-          { key: 'location', label: 'Konum', type: 'text' },
-          { key: 'start_date', label: 'Başlangıç Tarihi', type: 'date' },
-          { key: 'end_date', label: 'Bitiş Tarihi', type: 'date' },
-          { key: 'admin_name', label: 'Admin Adı', type: 'text' },
-          { key: 'admin_username', label: 'Admin Kullanıcı Adı', type: 'text' },
-          { key: 'admin_password', label: 'Admin Şifre', type: 'password' },
-          { key: 'admin_age', label: 'Admin Yaşı', type: 'number' },
-        ].map(({ key, label, type }) => (
+        {fields.map(({ key, label, type }) => (
           <div key={key}>
             <label className="mb-1 block text-lg font-medium">{label}</label>
             <input
               type={type}
               value={form[key as keyof typeof form]}
               onChange={(e) => update(key, e.target.value)}
+              placeholder={key === 'admin_tent_name' ? 'ör: Büyük Kaçar Ailesi' : undefined}
               className="w-full rounded-xl border-2 border-gray-300 px-4 py-3 text-lg focus:border-emerald-500 focus:outline-none"
               required
             />
