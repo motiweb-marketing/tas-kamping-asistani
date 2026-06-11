@@ -7,6 +7,7 @@ import { resolve } from 'path';
 import { createClient } from '@supabase/supabase-js';
 import { hashPassword } from '../src/lib/auth';
 import { generateCampDutyPlan } from '../src/lib/camp-plan';
+import { ensureCampaignRecommendations } from '../src/lib/recommendations';
 
 function loadEnv() {
   const envPath = resolve(process.cwd(), '.env.local');
@@ -151,6 +152,16 @@ async function main() {
     } else {
       console.log(`  ${dutyTemplates.length} nöbet slotu oluşturuldu`);
     }
+  }
+
+  try {
+    const { seeded } = await ensureCampaignRecommendations(supabase, campaign.id);
+    if (seeded > 0) {
+      console.log(`  ${seeded} önerilen liste maddesi eklendi`);
+    }
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    console.warn(`Önerilen listeler eklenemedi (006 migration?): ${msg}`);
   }
 
   console.log('\nSeed tamamlandı!');

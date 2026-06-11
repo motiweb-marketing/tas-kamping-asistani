@@ -41,14 +41,17 @@ export function buildSystemPrompt(params: PromptParams): string {
 İşte gün gün kamp menüsü:
 ${menuText}
 
-Bu menüye ve kişi sayısına göre milimetrik bir alışveriş listesi çıkar.
+Bu menüye ve kişi sayısına göre ORTAK KAMP ALIŞVERİŞ listesi çıkar.
 
-Ayrıca Taş Kamping kurallarına göre şu donanımları kesinlikle listeye ekle:
-- Sahil taşlık olduğu için ${params.totalPeople} adet 'Deniz Ayakkabısı'
-- Ortak buzdolabı yetersiz kalacağı için 'Büyük Boy Kamp Buzluğu/Termos'
-- Çadırlarda elektrik var, içerde telefonu şarj etmek için ${params.tentCount} adet 'Çoklu Priz / Uzatma Kablosu'
+ÖNEMLİ — listeye DAHİL ETME (bunlar kişisel veya çadır listesinde):
+- Deniz ayakkabısı, güneş kremi, şapka, mayo, kişisel ilaçlar
+- Çoklu priz, çadır ışığı, sinek spreyi, uyku tulumu (çadır ekipmanı)
 
-Sadece JSON formatında dönecek bir liste ver. Her öğe şu formatta olmalı: {"name": "...", "quantity": "...", "category": "food" veya "equipment"}
+Sadece grubun birlikte alıp paylaşacağı malzemeleri ekle:
+- Menüdeki tüm yiyecek ve içecek malzemeleri (category: food)
+- Ortak kullanım ekipmanı: büyük kamp buzluğu/termos, mangal kömürü/odun, ortak pişirme tencere/tava, tabak-bardak seti (kişi sayısına göre), çöp poşeti, bulaşık süngeri/deterjan (category: equipment)
+
+Sadece JSON formatında dönecek bir liste ver. Her öğe: {"name": "...", "quantity": "...", "category": "food" veya "equipment"}
 Yanıtın SADECE JSON array olmalı, başka metin ekleme.`;
 }
 

@@ -1,27 +1,35 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import type { Item } from '@/types';
+import type { Item, Tent } from '@/types';
 
 export default function ItemsReviewPage() {
   const [items, setItems] = useState<Item[]>([]);
+  const [tents, setTents] = useState<Tent[]>([]);
   const [loading, setLoading] = useState(true);
   const [publishing, setPublishing] = useState(false);
 
   async function load() {
-    const res = await fetch('/api/items?published=false');
-    const data = await res.json();
-    setItems(data.items || []);
+    const [itemsRes, tentsRes] = await Promise.all([
+      fetch('/api/items?published=false&scope=shared'),
+      fetch('/api/tents'),
+    ]);
+    const itemsData = await itemsRes.json();
+    const tentsData = await tentsRes.json();
+    setItems(itemsData.items || []);
+    setTents(tentsData.tents || []);
     setLoading(false);
   }
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    load();
+  }, []);
 
-  async function updateItem(id: string, field: string, value: string) {
+  async function updateItem(id: string, field: string, value: string | null) {
     await fetch(`/api/items/${id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ [field]: value }),
+      body: JSON.stringify({ [field]: value || null }),
     });
     load();
   }
@@ -42,8 +50,13 @@ export default function ItemsReviewPage() {
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex items-center justify-between">
-        <h2 className="text-xl font-bold">AI Liste Review</h2>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <h2 className="text-xl font-bold">Ortak Alışveriş Review</h2>
+          <p className="text-sm text-gray-600">
+            Yalnızca kamp ekibinin birlikte alacağı malzemeler. Kişisel ve çadır listeleri ayrıdır.
+          </p>
+        </div>
         <button
           onClick={publishAll}
           disabled={publishing || items.length === 0}
@@ -54,11 +67,11 @@ export default function ItemsReviewPage() {
       </div>
 
       <p className="text-lg text-gray-600">
-        {items.length} taslak malzeme — düzenleyin, silin, ardından yayınlayın.
+        {items.length} taslak ortak malzeme — düzenleyin, çadır atayın, ardından yayınlayın.
       </p>
 
       {items.length === 0 ? (
-        <p className="text-lg text-gray-500">Taslak malzeme yok.</p>
+        <p className="text-lg text-gray-500">Taslak ortak malzeme yok.</p>
       ) : (
         <div className="overflow-x-auto">
           <table className="w-full text-left text-base">
@@ -67,6 +80,7 @@ export default function ItemsReviewPage() {
                 <th className="p-2">Ad</th>
                 <th className="p-2">Miktar</th>
                 <th className="p-2">Kategori</th>
+                <th className="p-2">Çadır (opsiyonel)</th>
                 <th className="p-2"></th>
               </tr>
             </thead>
@@ -77,14 +91,14 @@ export default function ItemsReviewPage() {
                     <input
                       defaultValue={item.name}
                       onBlur={(e) => updateItem(item.id, 'name', e.target.value)}
-                      className="w-full rounded border px-2 py-1"
+                      className="w-full min-w-[140px] rounded border px-2 py-1"
                     />
                   </td>
                   <td className="p-2">
                     <input
                       defaultValue={item.quantity}
                       onBlur={(e) => updateItem(item.id, 'quantity', e.target.value)}
-                      className="w-20 rounded border px-2 py-1"
+                      className="w-24 rounded border px-2 py-1"
                     />
                   </td>
                   <td className="p-2">
@@ -95,6 +109,22 @@ export default function ItemsReviewPage() {
                     >
                       <option value="food">Yiyecek</option>
                       <option value="equipment">Ekipman</option>
+                    </select>
+                  </td>
+                  <td className="p-2">
+                    <select
+                      defaultValue={item.assigned_tent_id || ''}
+                      onChange={(e) =>
+                        updateItem(item.id, 'assigned_tent_id', e.target.value || null)
+                      }
+                      className="max-w-[160px] rounded border px-2 py-1"
+                    >
+                      <option value="">— Üstlenilmedi —</option>
+                      {tents.map((t) => (
+                        <option key={t.id} value={t.id}>
+                          {t.name}
+                        </option>
+                      ))}
                     </select>
                   </td>
                   <td className="p-2">

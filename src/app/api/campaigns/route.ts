@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { hashPassword } from '@/lib/auth';
 import { generateCampDutyPlan } from '@/lib/camp-plan';
+import { ensureCampaignRecommendations } from '@/lib/recommendations';
 import { formatPersonName, formatTitleCase } from '@/lib/format';
 import { getSession } from '@/lib/session';
 import { createServerClient } from '@/lib/supabase/server';
@@ -83,6 +84,12 @@ export async function POST(request: NextRequest) {
       await supabase.from('camp_duties').insert(
         dutyTemplates.map((t) => ({ campaign_id: campaign.id, ...t }))
       );
+    }
+
+    try {
+      await ensureCampaignRecommendations(supabase, campaign.id);
+    } catch (e) {
+      console.warn('Önerilen listeler eklenemedi:', e);
     }
 
     const session = await getSession();

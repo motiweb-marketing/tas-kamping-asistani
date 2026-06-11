@@ -70,7 +70,12 @@ async function connectClient(ref: string, password: string) {
 async function main() {
   const { ref, password } = loadEnv();
   const client = await connectClient(ref, password);
-  const files = ['003_camp_duties.sql', '004_menu_slots.sql', '005_menu_ai_prompt.sql'];
+  const files = [
+    '003_camp_duties.sql',
+    '004_menu_slots.sql',
+    '005_menu_ai_prompt.sql',
+    '006_item_list_scope.sql',
+  ];
 
   for (const file of files) {
     const sql = readFileSync(resolve('supabase/migrations', file), 'utf-8');

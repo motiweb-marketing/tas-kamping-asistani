@@ -13,7 +13,8 @@ export async function POST() {
     .from('items')
     .update({ is_published: true })
     .eq('campaign_id', session.user!.campaign_id)
-    .eq('is_published', false);
+    .eq('is_published', false)
+    .eq('list_scope', 'shared');
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });

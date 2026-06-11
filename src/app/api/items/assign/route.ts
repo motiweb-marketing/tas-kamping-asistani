@@ -18,6 +18,28 @@ export async function POST(request: NextRequest) {
   }
 
   const supabase = createServerClient();
+  const { data: existing, error: fetchErr } = await supabase
+    .from('items')
+    .select('id, list_scope, assigned_tent_id')
+    .eq('id', item_id)
+    .eq('campaign_id', session.user.campaign_id)
+    .single();
+
+  if (fetchErr || !existing) {
+    return NextResponse.json({ error: 'Malzeme bulunamadı' }, { status: 404 });
+  }
+
+  if (existing.list_scope !== 'shared') {
+    return NextResponse.json(
+      { error: 'Yalnızca ortak alışveriş listesinden üstlenilebilir' },
+      { status: 400 }
+    );
+  }
+
+  if (existing.assigned_tent_id && existing.assigned_tent_id !== session.user.tent_id) {
+    return NextResponse.json({ error: 'Bu malzeme başka bir çadır tarafından üstlenildi' }, { status: 409 });
+  }
+
   const { data: item, error } = await supabase
     .from('items')
     .update({ assigned_tent_id: session.user.tent_id })

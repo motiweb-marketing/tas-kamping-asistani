@@ -8,6 +8,7 @@ export type MealType = 'breakfast' | 'dinner';
 export type MealPeriod = 'breakfast' | 'dinner';
 export type MenuEntryKind = 'breakfast' | 'meal' | 'snack';
 export type ItemCategory = 'food' | 'equipment';
+export type ItemListScope = 'shared' | 'tent' | 'personal';
 export type DutyPeriod = 'breakfast' | 'dinner';
 export type DutyKind = 'meal_prep' | 'fire' | 'tea' | 'dishes';
 
@@ -69,11 +70,22 @@ export interface Item {
   name: string;
   quantity: string;
   category: ItemCategory;
+  list_scope: ItemListScope;
+  is_recommendation: boolean;
+  notes: string | null;
   added_by: string | null;
   assigned_tent_id: string | null;
   is_extra: boolean;
   is_published: boolean;
   price: number;
+  created_at: string;
+}
+
+export interface ItemCheck {
+  id: string;
+  item_id: string;
+  user_id: string;
+  tent_id: string | null;
   created_at: string;
 }
 

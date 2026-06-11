@@ -60,6 +60,14 @@ export async function POST() {
   });
 
   try {
+    await supabase
+      .from('items')
+      .delete()
+      .eq('campaign_id', campaignId)
+      .eq('list_scope', 'shared')
+      .eq('is_published', false)
+      .eq('is_extra', false);
+
     const aiItems = await callOpenRouter(systemPrompt, apiKey);
 
     const rows = aiItems.map((item) => ({
@@ -67,6 +75,8 @@ export async function POST() {
       name: item.name,
       quantity: item.quantity,
       category: item.category,
+      list_scope: 'shared' as const,
+      is_recommendation: false,
       is_extra: false,
       is_published: false,
       price: 0,

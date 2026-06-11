@@ -15,7 +15,9 @@ export function calculateBudget(
   tents: Tent[],
   items: Item[]
 ): BudgetSummary {
-  const publishedItems = items.filter((item) => item.is_published);
+  const publishedItems = items.filter(
+    (item) => item.is_published && (item.list_scope === 'shared' || !item.list_scope)
+  );
   const totalCost = publishedItems.reduce((sum, item) => sum + Number(item.price ?? 0), 0);
 
   const adultCount = users.filter((u) => u.age >= CHILD_AGE_THRESHOLD).length;
@@ -29,7 +31,11 @@ export function calculateBudget(
     const expectedContribution = tentShares * costPerShare;
 
     const actualSpent = publishedItems
-      .filter((item) => item.assigned_tent_id === tent.id)
+      .filter(
+        (item) =>
+          item.assigned_tent_id === tent.id &&
+          (item.list_scope === 'shared' || !item.list_scope)
+      )
       .reduce((sum, item) => sum + Number(item.price ?? 0), 0);
 
     const balance = actualSpent - expectedContribution;

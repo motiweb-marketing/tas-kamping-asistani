@@ -16,7 +16,8 @@ export default async function AdminLayout({
     { href: '/admin/tents', label: 'Çadırlar & Kişiler' },
     { href: '/admin/camp-settings', label: 'Kamp Ayarları' },
     { href: '/admin/duties', label: 'Kamp Planı' },
-    { href: '/admin/items-review', label: 'Liste Review' },
+    { href: '/admin/checklists', label: 'Önerilen Listeler' },
+    { href: '/admin/items-review', label: 'Ortak Liste' },
     { href: '/admin/settings', label: 'Ayarlar' },
   ];
 

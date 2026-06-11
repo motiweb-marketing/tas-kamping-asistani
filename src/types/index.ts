@@ -2,6 +2,7 @@ export type {
   UserRole,
   MealType,
   ItemCategory,
+  ItemListScope,
   Campaign,
   SafeCampaign,
   Tent,

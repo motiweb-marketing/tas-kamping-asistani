@@ -4,6 +4,7 @@ import type {
   ChatMessage,
   Item,
   ItemCategory,
+  ItemListScope,
   MealType,
   SafeUser,
   Tent,
@@ -25,6 +26,10 @@ export interface SessionUser {
 export interface ItemWithRelations extends Item {
   added_by_user?: Pick<SafeUser, 'id' | 'name'> | null;
   assigned_tent?: Pick<Tent, 'id' | 'name'> | null;
+  /** Kişisel listede: kullanıcı işaretledi mi */
+  checked?: boolean;
+  /** Çadır listesinde: çadırda biri işaretledi mi */
+  tent_checked?: boolean;
 }
 
 /** Chat balonlarında gösterilen mesaj */
@@ -96,6 +101,9 @@ export interface CreateItemInput {
   name: string;
   quantity: string;
   category: ItemCategory;
+  list_scope?: ItemListScope;
+  is_recommendation?: boolean;
+  notes?: string;
   added_by?: string;
   is_extra?: boolean;
   is_published?: boolean;
@@ -106,6 +114,8 @@ export interface UpdateItemInput {
   name?: string;
   quantity?: string;
   category?: ItemCategory;
+  list_scope?: ItemListScope;
+  notes?: string;
   assigned_tent_id?: string | null;
   price?: number;
   is_published?: boolean;

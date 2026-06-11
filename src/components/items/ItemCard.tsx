@@ -27,7 +27,10 @@ export default function ItemCard({
         <div className="flex-1">
           <h3 className="text-lg font-semibold">{item.name}</h3>
           <p className="text-base text-gray-700">
-            {item.quantity} · {item.category === 'food' ? 'Yiyecek' : 'Ekipman'}
+            {item.quantity}
+            {item.list_scope === 'shared' || !item.list_scope
+              ? ` · ${item.category === 'food' ? 'Yiyecek' : 'Ekipman'}`
+              : ''}
           </p>
           {item.is_extra && item.added_by_user && (
             <div className="mt-2">
