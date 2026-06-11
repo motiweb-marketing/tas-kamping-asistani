@@ -61,8 +61,8 @@ export default function SetupPage() {
 
   return (
     <main className="flex min-h-screen flex-col p-6 pb-12">
-      <Link href="/" className="mb-6 text-lg text-emerald-700">
-        ← Ana Sayfa
+      <Link href="/login/admin" className="mb-6 text-lg text-emerald-700">
+        ← Admin girişi
       </Link>
 
       <h1 className="mb-2 text-2xl font-bold">Yeni Kamp Oluştur</h1>

@@ -21,10 +21,10 @@ export default async function AdminLayout({
   ];
 
   return (
-    <div className="mx-auto min-h-screen max-w-lg">
+    <div className="mx-auto min-h-screen max-w-lg md:max-w-3xl lg:max-w-5xl">
       <header className="sticky top-0 z-40 border-b bg-white px-4 py-3">
         <h1 className="text-lg font-bold text-emerald-800">Admin Paneli</h1>
-        <nav className="mt-2 flex flex-wrap gap-2">
+        <nav className="mt-2 flex flex-wrap gap-2 lg:flex-nowrap">
           {links.map((l) => (
             <Link
               key={l.href}

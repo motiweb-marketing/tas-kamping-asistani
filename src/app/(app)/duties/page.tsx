@@ -96,7 +96,8 @@ export default function DutiesPage() {
       {duties.length === 0 && !isAdmin ? (
         <p className="text-lg text-gray-500">Admin henüz nöbet planını oluşturmadı.</p>
       ) : (
-        Object.entries(grouped).map(([key, group]) => (
+        <div className="lg:grid lg:grid-cols-2 lg:gap-4 lg:items-start">
+        {Object.entries(grouped).map(([key, group]) => (
           <section key={key} className="rounded-xl border-2 border-gray-200 p-3">
             <h3 className="mb-3 text-lg font-semibold text-emerald-800">
               {group[0].slot_date} — {group[0].period === 'breakfast' ? '☀️ Sabah' : '🌙 Akşam'}
@@ -160,7 +161,8 @@ export default function DutiesPage() {
               })}
             </div>
           </section>
-        ))
+        ))}
+        </div>
       )}
     </div>
   );
