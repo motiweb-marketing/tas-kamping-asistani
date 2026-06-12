@@ -25,13 +25,13 @@ export default function ContactCtaButtons({
   }
 
   return (
-    <div className={`flex flex-wrap gap-3 ${className}`}>
+    <div className={`flex flex-col gap-3 sm:flex-row sm:flex-wrap ${className}`}>
       {wa && (
         <a
           href={wa}
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex min-h-[48px] items-center justify-center rounded-xl bg-green-600 px-6 font-semibold text-white"
+          className="inline-flex min-h-[48px] w-full items-center justify-center rounded-xl bg-green-600 px-6 font-semibold text-white sm:w-auto"
         >
           WhatsApp ile yaz
         </a>
@@ -39,7 +39,7 @@ export default function ContactCtaButtons({
       {mail && (
         <a
           href={mail}
-          className="inline-flex min-h-[48px] items-center justify-center rounded-xl border-2 border-emerald-600 px-6 font-semibold text-emerald-700"
+          className="inline-flex min-h-[48px] w-full items-center justify-center rounded-xl border-2 border-emerald-600 px-6 font-semibold text-emerald-700 sm:w-auto"
         >
           E-posta gönder
         </a>

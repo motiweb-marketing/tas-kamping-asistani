@@ -8,10 +8,10 @@ export default function ListelerSubNav() {
   const pathname = usePathname();
 
   return (
-    <nav className="mb-6 flex flex-wrap gap-2 border-b border-forest-100 pb-4">
+    <nav className="mb-6 flex gap-2 overflow-x-auto border-b border-forest-100 pb-4 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
       <Link
         href="/admin/listeler"
-        className={`rounded-lg px-3 py-2 text-xs font-semibold ${
+        className={`shrink-0 rounded-lg px-3 py-2 text-xs font-semibold ${
           pathname === '/admin/listeler'
             ? 'bg-forest-800 text-white'
             : 'bg-forest-50 text-forest-700 hover:bg-forest-100'
@@ -25,7 +25,7 @@ export default function ListelerSubNav() {
           <Link
             key={list.slug}
             href={list.href}
-            className={`rounded-lg px-3 py-2 text-xs font-semibold ${
+            className={`shrink-0 rounded-lg px-3 py-2 text-xs font-semibold whitespace-nowrap ${
               active
                 ? 'bg-forest-800 text-white'
                 : 'bg-forest-50 text-forest-700 hover:bg-forest-100'

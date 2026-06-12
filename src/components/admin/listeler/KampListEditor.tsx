@@ -93,7 +93,7 @@ export default function KampListEditor() {
         üstlenebilir. İsterseniz taslakta çadır ataması da yapabilirsiniz.
       </div>
 
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-sm text-forest-600">
           {items.length} taslak madde
           {items.length === 0 && (
@@ -111,7 +111,7 @@ export default function KampListEditor() {
           type="button"
           onClick={publishAll}
           disabled={publishing || items.length === 0}
-          className="min-h-[44px] rounded-xl bg-forest-800 px-5 text-sm font-semibold text-white disabled:opacity-50"
+          className="min-h-[44px] w-full rounded-xl bg-forest-800 px-5 text-sm font-semibold text-white disabled:opacity-50 sm:w-auto"
         >
           {publishing ? 'Yayınlanıyor...' : 'Listeyi yayınla'}
         </button>

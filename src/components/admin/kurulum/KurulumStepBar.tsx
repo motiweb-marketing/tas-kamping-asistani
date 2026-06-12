@@ -8,8 +8,14 @@ interface KurulumStepBarProps {
 }
 
 export default function KurulumStepBar({ current }: KurulumStepBarProps) {
+  const currentStep = SETUP_STEPS.find((s) => s.id === current);
+
   return (
-    <div className="mb-8 overflow-x-auto">
+    <div className="mb-8">
+      <p className="mb-2 text-sm font-semibold text-forest-800 sm:hidden">
+        Adım {current}: {currentStep?.title}
+      </p>
+      <div className="overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
       <ol className="flex min-w-max gap-1.5">
         {SETUP_STEPS.map((step) => {
           const active = step.id === current;
@@ -45,6 +51,7 @@ export default function KurulumStepBar({ current }: KurulumStepBarProps) {
           );
         })}
       </ol>
+      </div>
     </div>
   );
 }

@@ -72,7 +72,7 @@ function KurulumWizardInner() {
 
       <header className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h1 className="font-display text-2xl font-bold text-forest-950">Program tanıtımı</h1>
+          <h1 className="font-display text-xl font-bold text-forest-950 sm:text-2xl">Program tanıtımı</h1>
           <p className="mt-1 text-sm text-forest-600">
             Adım {adim} / {SETUP_STEPS.length} — Kamp Asistanı&apos;nın nasıl çalıştığını öğrenin.
           </p>

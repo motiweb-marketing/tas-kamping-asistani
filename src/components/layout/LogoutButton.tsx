@@ -4,9 +4,10 @@ import { useState } from 'react';
 
 interface LogoutButtonProps {
   className?: string;
+  compact?: boolean;
 }
 
-export default function LogoutButton({ className = '' }: LogoutButtonProps) {
+export default function LogoutButton({ className = '', compact = false }: LogoutButtonProps) {
   const [loading, setLoading] = useState(false);
 
   async function handleLogout() {
@@ -25,7 +26,7 @@ export default function LogoutButton({ className = '' }: LogoutButtonProps) {
       disabled={loading}
       className={`min-h-[40px] rounded-lg border-2 border-red-200 bg-red-50 px-3 py-1.5 text-sm font-semibold text-red-700 active:bg-red-100 disabled:opacity-50 ${className}`}
     >
-      {loading ? 'Çıkılıyor...' : 'Çıkış Yap'}
+      {loading ? '...' : compact ? 'Çıkış' : 'Çıkış Yap'}
     </button>
   );
 }

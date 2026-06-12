@@ -11,20 +11,23 @@ import type { ItemCategory, ItemListScope, ItemWithRelations } from '@/types';
 
 type Tab = ItemListScope;
 
-const TABS: { id: Tab; label: string; hint: string }[] = [
+const TABS: { id: Tab; label: string; shortLabel: string; hint: string }[] = [
   {
     id: 'personal',
     label: 'Kişisel ihtiyaçlar',
+    shortLabel: 'Kişisel',
     hint: 'Kendiniz için getirmeniz gerekenler.',
   },
   {
     id: 'tent',
     label: 'Çadır ihtiyaçları',
+    shortLabel: 'Çadır',
     hint: 'Çadırınızın bulundurması gereken ekipman.',
   },
   {
     id: 'shared',
     label: 'Kamp ihtiyaçları',
+    shortLabel: 'Kamp',
     hint: 'Tüm kampın ortak listesi — çadırınız adet seçerek üstlenir.',
   },
 ];
@@ -164,7 +167,8 @@ export default function ItemsPage() {
               tab === t.id ? 'bg-emerald-600 text-white' : 'bg-gray-100 text-gray-700'
             }`}
           >
-            {t.label}
+            <span className="sm:hidden">{t.shortLabel}</span>
+            <span className="hidden sm:inline">{t.label}</span>
           </button>
         ))}
       </div>

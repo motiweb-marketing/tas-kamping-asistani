@@ -4,17 +4,18 @@ import { LIST_WORKFLOW_STEPS } from '@/lib/list-config';
 export default function ListWorkflowBanner({ compact = false }: { compact?: boolean }) {
   if (compact) {
     return (
-      <p className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-900">
-        Sıra:{' '}
-        {LIST_WORKFLOW_STEPS.map((s, i) => (
-          <span key={s.step}>
-            {i > 0 && ' → '}
-            <Link href={s.href} className="font-semibold underline">
-              {s.title}
-            </Link>
-          </span>
-        ))}
-      </p>
+      <div className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-900">
+        <p className="mb-2 font-semibold">Önerilen sıra</p>
+        <ol className="list-decimal space-y-1.5 pl-5">
+          {LIST_WORKFLOW_STEPS.map((s) => (
+            <li key={s.step}>
+              <Link href={s.href} className="font-medium underline">
+                {s.title}
+              </Link>
+            </li>
+          ))}
+        </ol>
+      </div>
     );
   }
 

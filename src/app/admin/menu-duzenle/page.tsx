@@ -516,7 +516,7 @@ export default function CampSettingsPage() {
       <button
         onClick={publishMenu}
         disabled={publishing || !hasMenuContent || !apiSettings?.configured}
-        className="min-h-[52px] rounded-xl bg-purple-600 text-lg font-semibold text-white disabled:opacity-50"
+        className="min-h-[52px] w-full rounded-xl bg-purple-600 text-base font-semibold text-white disabled:opacity-50 sm:text-lg"
       >
         {publishing ? 'AI Menüyü Düzenliyor...' : 'Menüyü AI ile Düzenle ve Yayınla'}
       </button>
@@ -550,7 +550,7 @@ export default function CampSettingsPage() {
       <button
         onClick={generateList}
         disabled={generating || !hasMenuContent || !apiSettings?.configured}
-        className="min-h-[52px] rounded-xl bg-blue-600 text-lg font-semibold text-white disabled:opacity-50"
+        className="min-h-[52px] w-full rounded-xl bg-blue-600 text-base font-semibold text-white disabled:opacity-50 sm:text-lg"
       >
         {generating ? 'AI Listesi Oluşturuluyor...' : 'Alışveriş Listesini Oluştur (AI)'}
       </button>

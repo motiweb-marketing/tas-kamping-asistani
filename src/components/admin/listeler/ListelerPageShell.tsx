@@ -21,7 +21,7 @@ export default function ListelerPageShell({
     <div>
       <ListelerSubNav />
       <header className="mb-6">
-        <h1 className="font-display text-2xl font-bold text-forest-950">{pageTitle}</h1>
+        <h1 className="font-display text-xl font-bold text-forest-950 sm:text-2xl">{pageTitle}</h1>
         {pageDesc && <p className="mt-2 text-sm leading-relaxed text-forest-600">{pageDesc}</p>}
         {config?.participantHint && (
           <p className="mt-2 text-xs text-forest-500">{config.participantHint}</p>
