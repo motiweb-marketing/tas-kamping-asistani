@@ -1,6 +1,5 @@
 import Link from 'next/link';
 import PlanBadge from '@/components/admin/PlanBadge';
-import TrialUpgradeCard from '@/components/admin/TrialUpgradeCard';
 import { fetchSetupProgress } from '@/lib/admin-setup-server';
 import { getCampaignLimits } from '@/lib/campaign-limits';
 import { getSession } from '@/lib/session';
@@ -62,8 +61,6 @@ export default async function AdminPage() {
           {campaignData?.start_date} — {campaignData?.end_date}
         </p>
       </div>
-
-      <TrialUpgradeCard limits={limits} />
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         {stats.map((s) => (

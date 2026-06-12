@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import TrialUpgradeCard from '@/components/admin/TrialUpgradeCard';
+import TrialLimitHint from '@/components/admin/TrialLimitHint';
 import { markCredentialsShared } from '@/components/admin/SetupChecklist';
 import AuthAlert from '@/components/auth/AuthAlert';
 import AuthButton from '@/components/auth/AuthButton';
@@ -93,7 +93,7 @@ export default function TentsManager({ showShareButtons = true }: { showShareBut
 
   return (
     <div className="space-y-8">
-      {limits && <TrialUpgradeCard limits={limits} />}
+      {limits && <TrialLimitHint limits={limits} />}
       {error && <AuthAlert>{error}</AuthAlert>}
 
       <section className="space-y-4">

@@ -10,6 +10,7 @@ import {
   getStepCompletion,
   type SetupProgressInput,
 } from '@/lib/admin-setup';
+import KurulumSkippedNotice from './KurulumSkippedNotice';
 import KurulumStepBar from './KurulumStepBar';
 import StepFrame from './StepFrame';
 import Step1Kamp from './steps/Step1Kamp';
@@ -95,6 +96,10 @@ function KurulumWizardInner() {
       </header>
 
       <KurulumStepBar current={adim} completed={completed} />
+
+      {progress && adim > 1 && (
+        <KurulumSkippedNotice currentStep={adim} progress={progress} />
+      )}
 
       <StepFrame title={step.title} description={step.description}>
         {adim === 1 && <Step1Kamp onSaved={loadProgress} />}

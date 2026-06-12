@@ -14,6 +14,7 @@ import {
   Wallet,
   Wand2,
 } from 'lucide-react';
+import PlanStatusChip from '@/components/admin/PlanStatusChip';
 import LogoutButton from '@/components/layout/LogoutButton';
 import { SITE } from '@/lib/site-config';
 
@@ -84,6 +85,7 @@ export default function AdminSidebar() {
         </nav>
 
         <div className="space-y-2 border-t border-forest-100 p-4">
+          <PlanStatusChip />
           <Link
             href="/items"
             className="flex w-full items-center justify-center rounded-lg border border-forest-200 py-2 text-sm font-semibold text-forest-800 hover:bg-forest-50"
@@ -96,11 +98,12 @@ export default function AdminSidebar() {
 
       {/* Mobile top bar + quick nav */}
       <header className="border-b border-forest-100 bg-white lg:hidden">
-        <div className="flex items-center justify-between px-4 py-3">
+        <div className="flex items-center justify-between gap-2 px-4 py-3">
           <Link href="/admin/kurulum" className="font-display font-bold text-forest-950">
             {SITE.name}
           </Link>
-          <div className="flex items-center gap-2">
+          <PlanStatusChip className="hidden min-w-[88px] sm:block lg:hidden" />
+          <div className="flex shrink-0 items-center gap-2">
             <Link href="/items" className="text-sm font-medium text-forest-700">
               Kampa git
             </Link>
