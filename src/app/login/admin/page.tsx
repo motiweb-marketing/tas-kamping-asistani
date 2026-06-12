@@ -1,8 +1,13 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { useState } from 'react';
+import AuthAlert from '@/components/auth/AuthAlert';
+import AuthButton from '@/components/auth/AuthButton';
+import AuthCard from '@/components/auth/AuthCard';
+import AuthField from '@/components/auth/AuthField';
+import AuthShell from '@/components/auth/AuthShell';
 
 export default function AdminLoginPage() {
   const router = useRouter();
@@ -19,11 +24,7 @@ export default function AdminLoginPage() {
     const res = await fetch('/api/auth/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        username,
-        password,
-        mode: 'admin',
-      }),
+      body: JSON.stringify({ username, password, mode: 'admin' }),
     });
 
     const data = await res.json();
@@ -39,60 +40,51 @@ export default function AdminLoginPage() {
   }
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center p-6">
-      <div className="w-full max-w-md rounded-2xl border border-gray-200 bg-white p-6 shadow-sm lg:p-8">
-        <Link href="/" className="mb-6 inline-block text-base text-emerald-700">
-          ← Ana sayfaya dön
-        </Link>
-
-        <h1 className="mb-2 text-2xl font-bold">Admin Girişi</h1>
-        <p className="mb-6 text-base text-gray-600">
-          Kamp organizatörü olarak panele giriş yapın.
-        </p>
-
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-          <div>
-            <label className="mb-1 block text-lg font-medium">Kullanıcı Adı</label>
-            <input
-              type="text"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              className="w-full rounded-xl border-2 border-gray-300 px-4 py-3 text-lg focus:border-emerald-500 focus:outline-none"
-              required
-            />
+    <AuthShell backHref="/" backLabel="Ana sayfaya dön">
+      <AuthCard
+        title="Organizatör girişi"
+        subtitle="Kamp paneline giriş yapın — liste, menü ve katılımcıları buradan yönetin."
+        footer={
+          <div className="space-y-3 text-center text-sm text-forest-600">
+            <p>
+              Henüz kampınız yok mu?{' '}
+              <Link href="/setup" className="font-semibold text-forest-800 underline hover:text-forest-950">
+                Ücretsiz kamp oluştur
+              </Link>
+            </p>
+            <p>
+              Katılımcı mısınız?{' '}
+              <Link href="/login" className="font-semibold text-forest-800 underline hover:text-forest-950">
+                Çadıra giriş
+              </Link>
+            </p>
           </div>
+        }
+      >
+        <form onSubmit={handleSubmit} className="space-y-5">
+          <AuthField
+            label="Kullanıcı adı"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            autoComplete="username"
+            required
+          />
+          <AuthField
+            label="Şifre"
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            autoComplete="current-password"
+            required
+          />
 
-          <div>
-            <label className="mb-1 block text-lg font-medium">Şifre</label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full rounded-xl border-2 border-gray-300 px-4 py-3 text-lg focus:border-emerald-500 focus:outline-none"
-              required
-            />
-          </div>
+          {error && <AuthAlert>{error}</AuthAlert>}
 
-          {error && (
-            <p className="rounded-lg bg-red-100 p-3 text-lg text-red-700">{error}</p>
-          )}
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="mt-2 min-h-[52px] rounded-xl bg-emerald-600 text-lg font-semibold text-white disabled:opacity-50"
-          >
-            {loading ? 'Giriş yapılıyor...' : 'Giriş Yap'}
-          </button>
+          <AuthButton type="submit" loading={loading}>
+            {loading ? 'Giriş yapılıyor...' : 'Giriş yap'}
+          </AuthButton>
         </form>
-
-        <p className="mt-6 text-center text-sm text-gray-500">
-          Henüz kampınız yok mu?{' '}
-          <Link href="/setup" className="font-medium text-emerald-700 underline">
-            İlk kampını oluştur
-          </Link>
-        </p>
-      </div>
-    </main>
+      </AuthCard>
+    </AuthShell>
   );
 }
