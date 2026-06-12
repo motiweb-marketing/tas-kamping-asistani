@@ -77,6 +77,7 @@ async function main() {
     '006_item_list_scope.sql',
     '007_claims_expenses.sql',
     '008_accommodation_fees.sql',
+    '009_accommodation_age_option.sql',
   ];
 
   for (const file of files) {

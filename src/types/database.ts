@@ -25,6 +25,8 @@ export interface Campaign {
   published_menu: string | null;
   adult_accommodation_fee: number;
   child_accommodation_fee: number;
+  accommodation_use_age_pricing: boolean;
+  accommodation_child_age_max: number;
   created_at: string;
 }
 

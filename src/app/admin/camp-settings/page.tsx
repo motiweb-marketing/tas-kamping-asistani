@@ -30,11 +30,15 @@ export default function CampSettingsPage() {
     end_date: string;
     adult_accommodation_fee: number;
     child_accommodation_fee: number;
+    accommodation_use_age_pricing: boolean;
+    accommodation_child_age_max: number;
   } | null>(null);
   const [dates, setDates] = useState({ start_date: '', end_date: '' });
   const [accommodationFees, setAccommodationFees] = useState({
     adult_accommodation_fee: '',
     child_accommodation_fee: '',
+    accommodation_use_age_pricing: false,
+    accommodation_child_age_max: '15',
   });
   const [savingFees, setSavingFees] = useState(false);
   const [days, setDays] = useState<DayCard[]>([]);
@@ -73,6 +77,8 @@ export default function CampSettingsPage() {
         setAccommodationFees({
           adult_accommodation_fee: String(campData.campaign.adult_accommodation_fee ?? 0),
           child_accommodation_fee: String(campData.campaign.child_accommodation_fee ?? 0),
+          accommodation_use_age_pricing: !!campData.campaign.accommodation_use_age_pricing,
+          accommodation_child_age_max: String(campData.campaign.accommodation_child_age_max ?? 15),
         });
         if (daysData.menu_ai_prompt !== undefined) {
           setMenuAiPrompt(daysData.menu_ai_prompt || '');
@@ -128,7 +134,11 @@ export default function CampSettingsPage() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         adult_accommodation_fee: Number(accommodationFees.adult_accommodation_fee),
-        child_accommodation_fee: Number(accommodationFees.child_accommodation_fee),
+        child_accommodation_fee: accommodationFees.accommodation_use_age_pricing
+          ? Number(accommodationFees.child_accommodation_fee)
+          : Number(accommodationFees.adult_accommodation_fee),
+        accommodation_use_age_pricing: accommodationFees.accommodation_use_age_pricing,
+        accommodation_child_age_max: Number(accommodationFees.accommodation_child_age_max),
       }),
     });
     const data = await res.json();
@@ -300,12 +310,51 @@ export default function CampSettingsPage() {
       >
         <h3 className="mb-2 text-lg font-semibold text-blue-900">Tesis Konaklama Ücreti</h3>
         <p className="mb-3 text-sm text-blue-800">
-          Çadır / tesis kişi başı konaklama bedeli. Yetişkin ve çocuk fiyatları ayrı girilir; bütçe
-          bakiyesinde her çadırın üyelerine göre hesaplanır (15 yaş altı = çocuk).
+          Çadır / tesis kişi başı konaklama bedeli. İsterseniz herkese tek fiyat, isterseniz yaşa göre
+          yetişkin / çocuk ayrımı uygulayın.
         </p>
+
+        <fieldset className="mb-4">
+          <legend className="mb-2 text-sm font-medium text-blue-900">Fiyatlandırma</legend>
+          <div className="flex flex-col gap-2 sm:flex-row sm:gap-4">
+            <label className="flex cursor-pointer items-center gap-2 rounded-lg border-2 border-blue-200 bg-white px-3 py-2">
+              <input
+                type="radio"
+                name="accommodation_pricing"
+                checked={!accommodationFees.accommodation_use_age_pricing}
+                onChange={() =>
+                  setAccommodationFees({
+                    ...accommodationFees,
+                    accommodation_use_age_pricing: false,
+                  })
+                }
+              />
+              <span className="text-sm">Herkes aynı ücret</span>
+            </label>
+            <label className="flex cursor-pointer items-center gap-2 rounded-lg border-2 border-blue-200 bg-white px-3 py-2">
+              <input
+                type="radio"
+                name="accommodation_pricing"
+                checked={accommodationFees.accommodation_use_age_pricing}
+                onChange={() =>
+                  setAccommodationFees({
+                    ...accommodationFees,
+                    accommodation_use_age_pricing: true,
+                  })
+                }
+              />
+              <span className="text-sm">Yaşa göre yetişkin / çocuk</span>
+            </label>
+          </div>
+        </fieldset>
+
         <div className="grid gap-3 sm:grid-cols-2">
           <div>
-            <label className="mb-1 block text-sm font-medium">Yetişkin (15+) — kişi başı (₺)</label>
+            <label className="mb-1 block text-sm font-medium">
+              {accommodationFees.accommodation_use_age_pricing
+                ? 'Yetişkin — kişi başı (₺)'
+                : 'Kişi başı ücret (₺)'}
+            </label>
             <input
               type="number"
               min="0"
@@ -321,23 +370,51 @@ export default function CampSettingsPage() {
               required
             />
           </div>
-          <div>
-            <label className="mb-1 block text-sm font-medium">Çocuk (15 altı) — kişi başı (₺)</label>
-            <input
-              type="number"
-              min="0"
-              step="0.01"
-              value={accommodationFees.child_accommodation_fee}
-              onChange={(e) =>
-                setAccommodationFees({
-                  ...accommodationFees,
-                  child_accommodation_fee: e.target.value,
-                })
-              }
-              className="w-full rounded-xl border-2 px-4 py-3 text-lg"
-              required
-            />
-          </div>
+          {accommodationFees.accommodation_use_age_pricing && (
+            <>
+              <div>
+                <label className="mb-1 block text-sm font-medium">Çocuk — kişi başı (₺)</label>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={accommodationFees.child_accommodation_fee}
+                  onChange={(e) =>
+                    setAccommodationFees({
+                      ...accommodationFees,
+                      child_accommodation_fee: e.target.value,
+                    })
+                  }
+                  className="w-full rounded-xl border-2 px-4 py-3 text-lg"
+                  required
+                />
+              </div>
+              <div className="sm:col-span-2">
+                <label className="mb-1 block text-sm font-medium">
+                  Çocuk sayılan yaş sınırı
+                </label>
+                <div className="flex flex-wrap items-center gap-2">
+                  <input
+                    type="number"
+                    min="0"
+                    max="99"
+                    value={accommodationFees.accommodation_child_age_max}
+                    onChange={(e) =>
+                      setAccommodationFees({
+                        ...accommodationFees,
+                        accommodation_child_age_max: e.target.value,
+                      })
+                    }
+                    className="w-24 rounded-xl border-2 px-4 py-3 text-lg"
+                    required
+                  />
+                  <span className="text-sm text-blue-800">
+                    yaşın <strong>altı</strong> çocuk ücreti, üstü yetişkin ücreti
+                  </span>
+                </div>
+              </div>
+            </>
+          )}
         </div>
         <button
           type="submit"

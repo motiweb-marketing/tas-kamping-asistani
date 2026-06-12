@@ -15,7 +15,9 @@ export async function GET() {
   const [campaignRes, usersRes, tentsRes, itemsRes, expensesRes] = await Promise.all([
     supabase
       .from('campaigns')
-      .select('id, name, adult_accommodation_fee, child_accommodation_fee')
+      .select(
+        'id, name, adult_accommodation_fee, child_accommodation_fee, accommodation_use_age_pricing, accommodation_child_age_max'
+      )
       .eq('id', campaignId)
       .single(),
     supabase

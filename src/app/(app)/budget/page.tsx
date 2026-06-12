@@ -152,8 +152,9 @@ function BudgetContent() {
                   <p>
                     Konaklama (tesis): <strong>{budget.total_accommodation_cost.toFixed(2)} ₺</strong>
                     <span className="ml-1 text-sm text-gray-600">
-                      (yetişkin {budget.adult_accommodation_fee.toFixed(2)} ₺ · çocuk{' '}
-                      {budget.child_accommodation_fee.toFixed(2)} ₺ / kişi)
+                      {budget.accommodation_use_age_pricing
+                        ? `(yetişkin ${budget.adult_accommodation_fee.toFixed(2)} ₺ · ${budget.accommodation_child_age_max} yaş altı ${budget.child_accommodation_fee.toFixed(2)} ₺ / kişi)`
+                        : `(kişi başı ${budget.adult_accommodation_fee.toFixed(2)} ₺)`}
                     </span>
                   </p>
                   <p>
@@ -168,8 +169,12 @@ function BudgetContent() {
                   1 payın alışveriş maliyeti: <strong>{budget.cost_per_share.toFixed(2)} ₺</strong>
                 </p>
                 <p className="mt-1 text-sm text-gray-600">
-                  Konaklama kişi başı sabit ücrettir. Alışverişte 15 yaş altı = 0.5 pay, 15+ = 1 pay.
-                  Market fişi girildiyse alışveriş tutarı fişlerden hesaplanır.
+                  Konaklama{' '}
+                  {budget.accommodation_use_age_pricing
+                    ? `yaşa göre hesaplanır (${budget.accommodation_child_age_max} yaş sınırı).`
+                    : 'herkes için aynı kişi başı ücrettir.'}{' '}
+                  Alışverişte 15 yaş altı = 0.5 pay, 15+ = 1 pay. Market fişi girildiyse alışveriş
+                  tutarı fişlerden hesaplanır.
                 </p>
               </div>
 

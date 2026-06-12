@@ -1,20 +1,43 @@
 import type { BudgetSummary, BudgetTentBalance, SafeUser, Tent } from '@/types';
 import type { CampExpense, Item } from '@/types/database';
 
-const CHILD_AGE_THRESHOLD = 15;
+const GROCERY_CHILD_AGE_THRESHOLD = 15;
 const CHILD_SHARE = 0.5;
 const ADULT_SHARE = 1;
 
 export function getUserShare(age: number): number {
-  return age < CHILD_AGE_THRESHOLD ? CHILD_SHARE : ADULT_SHARE;
+  return age < GROCERY_CHILD_AGE_THRESHOLD ? CHILD_SHARE : ADULT_SHARE;
+}
+
+export interface AccommodationPricing {
+  adultFee: number;
+  childFee: number;
+  useAgePricing: boolean;
+  childAgeMax: number;
+}
+
+export function getAccommodationPricing(campaign: {
+  adult_accommodation_fee?: number;
+  child_accommodation_fee?: number;
+  accommodation_use_age_pricing?: boolean;
+  accommodation_child_age_max?: number;
+}): AccommodationPricing {
+  return {
+    adultFee: Number(campaign.adult_accommodation_fee ?? 0),
+    childFee: Number(campaign.child_accommodation_fee ?? 0),
+    useAgePricing: !!campaign.accommodation_use_age_pricing,
+    childAgeMax: Number(campaign.accommodation_child_age_max ?? 15),
+  };
 }
 
 export function getAccommodationFee(
   age: number,
-  adultFee: number,
-  childFee: number
+  pricing: AccommodationPricing
 ): number {
-  return age < CHILD_AGE_THRESHOLD ? childFee : adultFee;
+  if (!pricing.useAgePricing) {
+    return pricing.adultFee;
+  }
+  return age < pricing.childAgeMax ? pricing.childFee : pricing.adultFee;
 }
 
 export function calculateBudget(
@@ -23,14 +46,15 @@ export function calculateBudget(
     name: string;
     adult_accommodation_fee?: number;
     child_accommodation_fee?: number;
+    accommodation_use_age_pricing?: boolean;
+    accommodation_child_age_max?: number;
   },
   users: SafeUser[],
   tents: Tent[],
   items: Item[],
   expenses: CampExpense[] = []
 ): BudgetSummary {
-  const adultFee = Number(campaign.adult_accommodation_fee ?? 0);
-  const childFee = Number(campaign.child_accommodation_fee ?? 0);
+  const pricing = getAccommodationPricing(campaign);
 
   const sharedPublished = items.filter(
     (item) =>
@@ -47,13 +71,13 @@ export function calculateBudget(
   const totalGroceryCost = expenseTotal > 0 ? expenseTotal : itemPriceTotal;
 
   const totalAccommodationCost = users.reduce(
-    (sum, user) => sum + getAccommodationFee(user.age, adultFee, childFee),
+    (sum, user) => sum + getAccommodationFee(user.age, pricing),
     0
   );
   const totalCost = totalGroceryCost + totalAccommodationCost;
 
-  const adultCount = users.filter((u) => u.age >= CHILD_AGE_THRESHOLD).length;
-  const childCount = users.filter((u) => u.age < CHILD_AGE_THRESHOLD).length;
+  const adultCount = users.filter((u) => u.age >= GROCERY_CHILD_AGE_THRESHOLD).length;
+  const childCount = users.filter((u) => u.age < GROCERY_CHILD_AGE_THRESHOLD).length;
   const totalShares = users.reduce((sum, u) => sum + getUserShare(u.age), 0);
   const costPerShare = totalShares > 0 ? totalGroceryCost / totalShares : 0;
 
@@ -61,7 +85,7 @@ export function calculateBudget(
     const members = users.filter((u) => u.tent_id === tent.id);
     const tentShares = members.reduce((sum, u) => sum + getUserShare(u.age), 0);
     const accommodationOwed = members.reduce(
-      (sum, user) => sum + getAccommodationFee(user.age, adultFee, childFee),
+      (sum, user) => sum + getAccommodationFee(user.age, pricing),
       0
     );
     const groceryExpected = tentShares * costPerShare;
@@ -101,8 +125,10 @@ export function calculateBudget(
 
   return {
     campaign: { id: campaign.id, name: campaign.name },
-    adult_accommodation_fee: adultFee,
-    child_accommodation_fee: childFee,
+    accommodation_use_age_pricing: pricing.useAgePricing,
+    accommodation_child_age_max: pricing.childAgeMax,
+    adult_accommodation_fee: pricing.adultFee,
+    child_accommodation_fee: pricing.childFee,
     total_accommodation_cost: totalAccommodationCost,
     total_grocery_cost: totalGroceryCost,
     total_cost: totalCost,

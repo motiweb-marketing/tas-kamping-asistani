@@ -89,8 +89,12 @@ export interface BudgetTentBalance {
 }
 
 /** Kamp geneli bütçe özeti */
+export type AccommodationPricingMode = 'flat' | 'age_split';
+
 export interface BudgetSummary {
   campaign: Pick<Campaign, 'id' | 'name'>;
+  accommodation_use_age_pricing: boolean;
+  accommodation_child_age_max: number;
   adult_accommodation_fee: number;
   child_accommodation_fee: number;
   total_accommodation_cost: number;

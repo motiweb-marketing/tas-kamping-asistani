@@ -18,12 +18,14 @@ export async function PATCH(request: NextRequest) {
     menu_ai_prompt,
     adult_accommodation_fee,
     child_accommodation_fee,
+    accommodation_use_age_pricing,
+    accommodation_child_age_max,
   } = body;
 
   const supabase = createServerClient();
   const campaignId = session.user.campaign_id;
 
-  const updates: Record<string, string | number> = {};
+  const updates: Record<string, string | number | boolean> = {};
   if (start_date) updates.start_date = start_date;
   if (end_date) updates.end_date = end_date;
   if (name) updates.name = name;
@@ -46,6 +48,18 @@ export async function PATCH(request: NextRequest) {
     updates.child_accommodation_fee = fee;
   }
 
+  if (accommodation_use_age_pricing !== undefined) {
+    updates.accommodation_use_age_pricing = !!accommodation_use_age_pricing;
+  }
+
+  if (accommodation_child_age_max !== undefined) {
+    const ageMax = Number(accommodation_child_age_max);
+    if (Number.isNaN(ageMax) || ageMax < 0 || ageMax > 99) {
+      return NextResponse.json({ error: 'Geçerli çocuk yaş sınırı girin (0–99)' }, { status: 400 });
+    }
+    updates.accommodation_child_age_max = ageMax;
+  }
+
   if (!Object.keys(updates).length) {
     return NextResponse.json({ error: 'Güncellenecek alan yok' }, { status: 400 });
   }
@@ -65,7 +79,7 @@ export async function PATCH(request: NextRequest) {
     .update(updates)
     .eq('id', campaignId)
     .select(
-      'id, name, location, start_date, end_date, menu_ai_prompt, adult_accommodation_fee, child_accommodation_fee'
+      'id, name, location, start_date, end_date, menu_ai_prompt, adult_accommodation_fee, child_accommodation_fee, accommodation_use_age_pricing, accommodation_child_age_max'
     )
     .single();
 
