@@ -8,14 +8,14 @@ export default function TentLoginCard() {
           <p className="text-4xl sm:text-5xl" aria-hidden>
             ⛺
           </p>
-          <h2 className="mt-4 text-2xl font-bold sm:text-3xl">Çadırına bağlan</h2>
+          <h2 className="mt-4 text-2xl font-bold sm:text-3xl">Zaten davet edildiniz mi?</h2>
           <p className="mx-auto mt-3 max-w-lg text-lg text-emerald-100">
-            Kullanıcı adın ve şifrenle giriş yap; listeni gör,
-            görev al, sohbete katıl.
+            Organizatörün verdiği kullanıcı adı ve şifre ile giriş yapın; listenizi görün,
+            malzeme üstlenin, nöbet alın.
           </p>
           <Link
             href="/login"
-            className="mt-8 inline-flex min-h-[56px] w-full max-w-md items-center justify-center rounded-2xl bg-white px-8 text-xl font-bold text-emerald-800 shadow-lg transition-transform active:scale-[0.98] sm:w-auto sm:min-w-[320px]"
+            className="mt-8 inline-flex min-h-[56px] w-full max-w-md items-center justify-center rounded-2xl bg-white px-8 text-xl font-bold text-emerald-800 shadow-lg sm:w-auto sm:min-w-[320px]"
           >
             Çadıra Giriş Yap
           </Link>

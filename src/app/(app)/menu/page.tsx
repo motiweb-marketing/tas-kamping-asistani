@@ -69,7 +69,7 @@ export default function MenuPage() {
         <p className="text-lg text-gray-500">
           {isPublished
             ? 'Henüz menü girilmedi.'
-            : 'Organizatör henüz menüyü yayınlamadı. Ham notlar hazır olunca AI ile yayınlanacak.'}
+            : 'Organizatör henüz menüyü paylaşmadı.'}
         </p>
       ) : (
         <div className="grid gap-4 lg:grid-cols-2">

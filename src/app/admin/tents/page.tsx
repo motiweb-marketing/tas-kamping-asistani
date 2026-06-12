@@ -1,11 +1,31 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import TrialUpgradeCard from '@/components/admin/TrialUpgradeCard';
+import { markCredentialsShared } from '@/components/admin/SetupChecklist';
+import type { CampaignLimits } from '@/lib/campaign-limits';
+import { SITE } from '@/lib/site-config';
 import type { SafeUser, Tent } from '@/types';
+
+function copyLoginInfo(username: string, passwordHint?: string) {
+  const lines = [
+    `${SITE.name} — Kamp girişi`,
+    `Adres: ${SITE.url}/login`,
+    `Kullanıcı adı: ${username}`,
+  ];
+  if (passwordHint) lines.push(`Şifre: ${passwordHint}`);
+  else lines.push('Şifre: (organizatör tarafından verildi)');
+  const text = lines.join('\n');
+  navigator.clipboard.writeText(text).then(() => {
+    markCredentialsShared();
+    alert('Giriş bilgisi panoya kopyalandı.');
+  });
+}
 
 export default function AdminTentsPage() {
   const [tents, setTents] = useState<Tent[]>([]);
   const [users, setUsers] = useState<SafeUser[]>([]);
+  const [limits, setLimits] = useState<CampaignLimits | null>(null);
   const [tentName, setTentName] = useState('');
   const [userForm, setUserForm] = useState({
     name: '', age: '30', username: '', password: '', tent_id: '',
@@ -19,11 +39,17 @@ export default function AdminTentsPage() {
   const [error, setError] = useState('');
 
   async function load() {
-    const [tRes, uRes] = await Promise.all([fetch('/api/tents'), fetch('/api/users')]);
+    const [tRes, uRes, cRes] = await Promise.all([
+      fetch('/api/tents'),
+      fetch('/api/users'),
+      fetch('/api/campaign'),
+    ]);
     const tData = await tRes.json();
     const uData = await uRes.json();
+    const cData = await cRes.json();
     setTents(tData.tents || []);
     setUsers(uData.users || []);
+    setLimits(cData.limits || null);
   }
 
   useEffect(() => { load(); }, []);
@@ -144,8 +170,13 @@ export default function AdminTentsPage() {
     load();
   }
 
+  const canAddTent = limits?.can_add_tent !== false;
+  const canAddUser = limits?.can_add_user !== false;
+
   return (
     <div className="flex flex-col gap-8">
+      {limits && <TrialUpgradeCard limits={limits} />}
+
       {error && (
         <p className="rounded-lg bg-red-100 p-3 text-lg text-red-700">{error}</p>
       )}
@@ -157,10 +188,15 @@ export default function AdminTentsPage() {
             value={tentName}
             onChange={(e) => setTentName(e.target.value)}
             placeholder="Çadır adı (ör: küçük kaçar ailesi)"
-            className="flex-1 rounded-xl border-2 px-4 py-3 text-lg"
+            className="flex-1 rounded-xl border-2 px-4 py-3 text-lg disabled:bg-gray-100"
             required
+            disabled={!canAddTent}
           />
-          <button type="submit" className="min-h-[48px] rounded-xl bg-emerald-600 px-4 font-semibold text-white">
+          <button
+            type="submit"
+            disabled={!canAddTent}
+            className="min-h-[48px] rounded-xl bg-emerald-600 px-4 font-semibold text-white disabled:opacity-50"
+          >
             Ekle
           </button>
         </form>
@@ -229,21 +265,27 @@ export default function AdminTentsPage() {
               placeholder={label}
               value={userForm[key as keyof typeof userForm]}
               onChange={(e) => setUserForm({ ...userForm, [key]: e.target.value })}
-              className="rounded-xl border-2 px-4 py-3 text-lg"
+              className="rounded-xl border-2 px-4 py-3 text-lg disabled:bg-gray-100"
               required
+              disabled={!canAddUser}
             />
           ))}
           <select
             value={userForm.tent_id}
             onChange={(e) => setUserForm({ ...userForm, tent_id: e.target.value })}
-            className="rounded-xl border-2 px-4 py-3 text-lg"
+            className="rounded-xl border-2 px-4 py-3 text-lg disabled:bg-gray-100"
+            disabled={!canAddUser}
           >
             <option value="">Çadır seçin</option>
             {tents.map((t) => (
               <option key={t.id} value={t.id}>{t.name}</option>
             ))}
           </select>
-          <button type="submit" className="min-h-[48px] rounded-xl bg-emerald-600 text-lg font-semibold text-white">
+          <button
+            type="submit"
+            disabled={!canAddUser}
+            className="min-h-[48px] rounded-xl bg-emerald-600 text-lg font-semibold text-white disabled:opacity-50"
+          >
             Kişi Ekle
           </button>
         </form>
@@ -314,7 +356,14 @@ export default function AdminTentsPage() {
                       </span>
                     )}
                   </p>
-                  <div className="mt-2 flex gap-2">
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={() => copyLoginInfo(u.username)}
+                      className="min-h-[44px] rounded-lg bg-emerald-100 px-3 text-sm font-medium text-emerald-900"
+                    >
+                      Giriş bilgisini kopyala
+                    </button>
                     <button
                       onClick={() => startEditUser(u)}
                       className="min-h-[44px] flex-1 rounded-lg bg-blue-100 font-medium text-blue-800"

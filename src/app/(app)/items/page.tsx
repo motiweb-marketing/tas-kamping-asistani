@@ -29,9 +29,16 @@ const TABS: { id: Tab; label: string; hint: string }[] = [
   },
 ];
 
+interface CampaignBanner {
+  name: string;
+  start_date: string;
+  end_date: string;
+}
+
 export default function ItemsPage() {
   const [tab, setTab] = useState<Tab>('shared');
   const [items, setItems] = useState<ItemWithRelations[]>([]);
+  const [campaign, setCampaign] = useState<CampaignBanner | null>(null);
   const [loading, setLoading] = useState(true);
   const [showAdd, setShowAdd] = useState(false);
   const [search, setSearch] = useState('');
@@ -49,6 +56,21 @@ export default function ItemsPage() {
     const data = await res.json();
     setItems(data.items || []);
     setLoading(false);
+  }, []);
+
+  useEffect(() => {
+    fetch('/api/campaign')
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.campaign) {
+          setCampaign({
+            name: d.campaign.name,
+            start_date: d.campaign.start_date,
+            end_date: d.campaign.end_date,
+          });
+        }
+      })
+      .catch(() => undefined);
   }, []);
 
   useEffect(() => {
@@ -97,18 +119,40 @@ export default function ItemsPage() {
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex items-start justify-between gap-2">
+      {campaign && (
+        <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
+          <p className="font-semibold">{campaign.name}</p>
+          <p>
+            {campaign.start_date} — {campaign.end_date} · Listeden üstlen → Harcama → Nöbet → Chat
+          </p>
+        </div>
+      )}
+
+      <div className="flex flex-wrap items-start justify-between gap-2">
         <div>
           <h2 className="text-xl font-bold">Kamp Listeleri</h2>
           <p className="mt-1 text-sm text-gray-600">{activeTab.hint}</p>
         </div>
-        <Link
-          href="/summary"
-          className="shrink-0 rounded-lg bg-gray-100 px-3 py-2 text-sm font-semibold text-emerald-800"
-        >
-          Özet
-        </Link>
+        <div className="flex shrink-0 flex-wrap gap-2">
+          <Link href="/summary" className="rounded-lg bg-gray-100 px-3 py-2 text-sm font-semibold text-emerald-800">
+            Özet
+          </Link>
+          <Link href="/menu" className="rounded-lg bg-gray-100 px-3 py-2 text-sm font-semibold text-emerald-800">
+            Menü
+          </Link>
+          <Link href="/duties" className="rounded-lg bg-gray-100 px-3 py-2 text-sm font-semibold text-emerald-800">
+            Nöbet
+          </Link>
+        </div>
       </div>
+
+      {tab === 'shared' && (
+        <p className="rounded-lg bg-gray-50 px-3 py-2 text-xs text-gray-600">
+          <span className="font-medium text-amber-700">Turuncu</span> eksik ·{' '}
+          <span className="font-medium text-emerald-700">Yeşil</span> tamam ·{' '}
+          <span className="font-medium text-blue-700">Mavi</span> ekstra malzeme
+        </p>
+      )}
 
       <div className="flex gap-2 overflow-x-auto pb-1">
         {TABS.map((t) => (
@@ -183,9 +227,25 @@ export default function ItemsPage() {
       {loading ? (
         <p className="text-lg text-gray-500">Yükleniyor...</p>
       ) : items.length === 0 ? (
-        <p className="text-lg text-gray-500">
-          {tab === 'shared' ? 'Henüz ortak liste yok.' : 'Liste henüz hazırlanmadı.'}
-        </p>
+        <div className="rounded-xl border-2 border-gray-200 bg-gray-50 p-4 text-gray-700">
+          {tab === 'shared' ? (
+            <>
+              <p className="font-medium">Henüz ortak liste yayınlanmadı.</p>
+              <p className="mt-2 text-sm">
+                Organizatör menü ve alışveriş listesini hazırlayınca burada görünecek. Bu arada{' '}
+                <Link href="/menu" className="font-semibold text-emerald-700 underline">
+                  menüye
+                </Link>{' '}
+                bakabilirsiniz.
+              </p>
+            </>
+          ) : (
+            <>
+              <p className="font-medium">Bu liste henüz hazırlanmadı.</p>
+              <p className="mt-2 text-sm">Organizatör önerilen listeleri eklediğinde burada görünür.</p>
+            </>
+          )}
+        </div>
       ) : filteredItems.length === 0 ? (
         <p className="text-lg text-gray-500">Aramanızla eşleşen malzeme yok.</p>
       ) : tab === 'personal' || tab === 'tent' ? (

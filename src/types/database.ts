@@ -27,6 +27,9 @@ export interface Campaign {
   child_accommodation_fee: number;
   accommodation_use_age_pricing: boolean;
   accommodation_child_age_max: number;
+  plan_tier: 'trial' | 'paid';
+  max_tents: number;
+  max_users: number;
   created_at: string;
 }
 

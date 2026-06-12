@@ -1,5 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { hashPassword } from '@/lib/auth';
+import {
+  getCampaignLimits,
+  limitErrorMessage,
+  upgradeHint,
+} from '@/lib/campaign-limits';
 import { formatPersonName } from '@/lib/format';
 import { syncStandardSharedItems } from '@/lib/sync-standard-items';
 import { getSession } from '@/lib/session';
@@ -40,6 +45,14 @@ export async function POST(request: NextRequest) {
 
   const password_hash = await hashPassword(password);
   const supabase = createServerClient();
+
+  const limits = await getCampaignLimits(supabase, session.user.campaign_id);
+  if (!limits.can_add_user) {
+    return NextResponse.json(
+      { error: limitErrorMessage('user', limits), limits, upgrade: upgradeHint() },
+      { status: 403 }
+    );
+  }
 
   const { data, error } = await supabase
     .from('users')

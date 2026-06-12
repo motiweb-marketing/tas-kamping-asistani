@@ -3,7 +3,7 @@ import type { AiGeneratedItem, MenuSummaryLine } from '@/types';
 const OPENROUTER_HEADERS = {
   'Content-Type': 'application/json',
   'HTTP-Referer': process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000',
-  'X-Title': 'Tas Kamping Asistani',
+  'X-Title': 'Kamp Asistani',
 } as const;
 
 interface PromptParams {
@@ -36,7 +36,7 @@ export function buildSystemPrompt(params: PromptParams): string {
     })
     .join('\n');
 
-  return `Sen Taş Kamping'e gidecek bir grubun asistanısın. Grupta toplam ${params.totalPeople} kişi var (${params.adultCount} yetişkin, ${params.childCount} çocuk). Katılımcılar ${params.tentCount} adet çadırda kalacak.
+  return `Sen kampa gidecek bir grubun asistanısın. Grupta toplam ${params.totalPeople} kişi var (${params.adultCount} yetişkin, ${params.childCount} çocuk). Katılımcılar ${params.tentCount} adet çadırda kalacak.
 
 İşte gün gün kamp menüsü:
 ${menuText}

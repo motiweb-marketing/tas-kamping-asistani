@@ -1,6 +1,7 @@
 import AppHeader from '@/components/layout/AppHeader';
 import BottomNav from '@/components/layout/BottomNav';
 import InstallPrompt from '@/components/layout/InstallPrompt';
+import FirstVisitTour from '@/components/onboarding/FirstVisitTour';
 import { getSession } from '@/lib/session';
 import { redirect } from 'next/navigation';
 
@@ -24,6 +25,7 @@ export default async function AppLayout({
       />
       <main className="p-4">
         <InstallPrompt />
+        {session.user?.role !== 'admin' && <FirstVisitTour />}
         {children}
       </main>
       <BottomNav />

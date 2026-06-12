@@ -53,11 +53,11 @@ export default function DutiesPage() {
 
   return (
     <div className="flex flex-col gap-4">
-      <h2 className="text-xl font-bold">Kamp Görevleri & Plan</h2>
+      <h2 className="text-xl font-bold">Nöbet Planı</h2>
 
       {isAdmin && duties.length === 0 && (
         <div className="rounded-xl bg-amber-100 p-4">
-          <p className="text-lg text-amber-900">Henüz görev planı oluşturulmadı.</p>
+          <p className="text-lg text-amber-900">Henüz nöbet planı oluşturulmadı.</p>
           <button
             onClick={async () => {
               const res = await fetch('/api/duties', { method: 'POST' });
@@ -136,7 +136,7 @@ export default function DutiesPage() {
                           onClick={() => dutyAction(d.id, 'take')}
                           className="min-h-[44px] flex-1 rounded-lg bg-emerald-600 px-3 text-base font-semibold text-white"
                         >
-                          Görevi Al
+                          Nöbeti Al
                         </button>
                       )}
                       {isMine && !d.release_requested && (

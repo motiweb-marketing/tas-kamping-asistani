@@ -81,7 +81,8 @@ export default function AddExpenseForm({
     >
       <h3 className="mb-3 text-lg font-semibold text-blue-900">Yeni Harcama Kaydı</h3>
       <p className="mb-3 text-sm text-blue-800">
-        Marketten aldığınız ortak malzemelerin tutarını buradan girin. Bakiye hesabı bu kayıtlara göre yapılır.
+        Marketten aldığınız ortak malzemelerin tutarını buradan girin. Çadırınızın üstlendiği
+        malzemeler listede önce gösterilir.
       </p>
 
       <label className="mb-1 block text-sm font-medium">Malzeme</label>

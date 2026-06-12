@@ -1,4 +1,8 @@
 import Link from 'next/link';
+import PlanBadge from '@/components/admin/PlanBadge';
+import SetupChecklist from '@/components/admin/SetupChecklist';
+import TrialUpgradeCard from '@/components/admin/TrialUpgradeCard';
+import { getCampaignLimits } from '@/lib/campaign-limits';
 import { getSession } from '@/lib/session';
 import { createServerClient } from '@/lib/supabase/server';
 import type { Campaign } from '@/types';
@@ -13,6 +17,8 @@ export default async function AdminPage() {
     .select('*')
     .eq('id', campaignId)
     .single()) as { data: Campaign | null };
+
+  const limits = await getCampaignLimits(supabase, campaignId);
 
   const [tents, users, items, menus] = await Promise.all([
     supabase.from('tents').select('id', { count: 'exact', head: true }).eq('campaign_id', campaignId),
@@ -35,18 +41,31 @@ export default async function AdminPage() {
     { href: '/admin/camp-settings', label: 'Kamp Ayarları & Menü' },
   ];
 
+  const planTier = campaignData?.plan_tier || limits.plan_tier;
+
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h2 className="text-xl font-bold">{campaignData?.name}</h2>
+        <div className="flex flex-wrap items-center gap-2">
+          <h2 className="text-xl font-bold">{campaignData?.name}</h2>
+          <PlanBadge planTier={planTier} />
+        </div>
         <p className="text-lg text-gray-600">{campaignData?.location}</p>
         <p className="text-base text-gray-500">
           {campaignData?.start_date} — {campaignData?.end_date}
         </p>
-        <p className="mt-2 rounded-lg bg-gray-100 p-3 text-sm">
-          Kamp ID: <strong>{campaignId}</strong>
-        </p>
       </div>
+
+      <TrialUpgradeCard limits={limits} />
+
+      <SetupChecklist
+        tentCount={tents.count || 0}
+        userCount={users.count || 0}
+        hasDates={!!(campaignData?.start_date && campaignData?.end_date)}
+        hasApiKey={!!campaignData?.openrouter_api_key}
+        menuCount={menus.count || 0}
+        itemCount={items.count || 0}
+      />
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         {stats.map((s) => (

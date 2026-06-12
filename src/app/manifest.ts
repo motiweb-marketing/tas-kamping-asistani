@@ -1,10 +1,11 @@
 import type { MetadataRoute } from 'next';
+import { SITE } from '@/lib/site-config';
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: 'Taş Kamping Asistanı',
-    short_name: 'Kamping',
-    description: 'Kamp organizasyonu, görevler, malzeme listesi ve bütçe',
+    name: SITE.name,
+    short_name: 'Kamp Asistanı',
+    description: SITE.description,
     start_url: '/items',
     scope: '/',
     display: 'standalone',
@@ -13,19 +14,13 @@ export default function manifest(): MetadataRoute.Manifest {
     theme_color: '#059669',
     icons: [
       {
-        src: '/icon-192.png',
+        src: '/icon',
         sizes: '192x192',
         type: 'image/png',
         purpose: 'any',
       },
       {
-        src: '/icon-512.png',
-        sizes: '512x512',
-        type: 'image/png',
-        purpose: 'any',
-      },
-      {
-        src: '/icon-512.png',
+        src: '/icon',
         sizes: '512x512',
         type: 'image/png',
         purpose: 'maskable',

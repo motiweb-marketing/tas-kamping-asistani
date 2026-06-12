@@ -5,10 +5,7 @@ import { usePathname } from 'next/navigation';
 
 const tabs = [
   { href: '/items', label: 'Liste', icon: '📋' },
-  { href: '/summary', label: 'Özet', icon: '📊' },
-  { href: '/menu', label: 'Menü', icon: '🍽️' },
-  { href: '/my-tent', label: 'Çadır', icon: '⛺' },
-  { href: '/duties', label: 'Görev', icon: '📅' },
+  { href: '/my-tent', label: 'Çadırım', icon: '⛺' },
   { href: '/budget', label: 'Harcama', icon: '💰' },
   { href: '/chat', label: 'Chat', icon: '💬' },
 ];
@@ -30,7 +27,7 @@ export default function BottomNav() {
               }`}
             >
               <span className="text-xl">{tab.icon}</span>
-              <span className="text-[10px] sm:text-xs">{tab.label}</span>
+              <span className="text-xs sm:text-sm">{tab.label}</span>
             </Link>
           );
         })}

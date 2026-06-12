@@ -10,6 +10,7 @@ export default function ChatPage() {
   const [user, setUser] = useState<SessionUser | null>(null);
   const [text, setText] = useState('');
   const [sending, setSending] = useState(false);
+  const [loading, setLoading] = useState(true);
   const bottomRef = useRef<HTMLDivElement>(null);
 
   const fetchMessages = useCallback(async () => {
@@ -24,6 +25,7 @@ export default function ChatPage() {
       const meData = await meRes.json();
       setUser(meData.user);
       await fetchMessages();
+      setLoading(false);
 
       if (meData.user?.campaign_id) {
         const supabase = createBrowserClient();
@@ -91,11 +93,32 @@ export default function ChatPage() {
     setSending(false);
   }
 
+  if (loading) {
+    return <p className="text-lg text-gray-500">Yükleniyor...</p>;
+  }
+
+  if (!user?.tent_id && user?.role !== 'admin') {
+    return (
+      <div className="rounded-xl border-2 border-amber-200 bg-amber-50 p-4 text-amber-900">
+        <h2 className="text-xl font-bold">Kamp Sohbeti</h2>
+        <p className="mt-2">
+          Sohbete katılmak için bir çadıra atanmanız gerekir. Kamp organizatörünüzden çadır
+          ataması ve giriş bilgisi isteyin.
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div className="flex h-[calc(100vh-180px)] flex-col">
       <h2 className="mb-3 text-xl font-bold">Kamp Sohbeti</h2>
 
       <div className="flex-1 space-y-3 overflow-y-auto rounded-xl bg-gray-100 p-3">
+        {messages.length === 0 && (
+          <p className="py-8 text-center text-gray-500">
+            Henüz mesaj yok. İlk mesajı siz yazın — liste güncellemeleri de burada görünür.
+          </p>
+        )}
         {messages.map((msg) => (
           <ChatBubble
             key={msg.id}

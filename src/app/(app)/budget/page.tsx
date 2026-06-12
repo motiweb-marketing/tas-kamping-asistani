@@ -39,15 +39,23 @@ function BudgetContent() {
     const res = await fetch('/api/items?scope=shared');
     const data = await res.json();
     const items = (data.items || []) as ItemWithRelations[];
-    setExpenseItems(
-      items
-        .filter(
-          (item) =>
-            !item.is_recommendation &&
-            (item.disposition || 'consumable') === 'consumable'
-        )
-        .map((item) => ({ id: item.id, name: item.name }))
+    const meRes = await fetch('/api/auth/me');
+    const meData = await meRes.json();
+    const tentId = meData.user?.tent_id as string | undefined;
+
+    const filtered = items.filter(
+      (item) =>
+        !item.is_recommendation &&
+        (item.disposition || 'consumable') === 'consumable'
     );
+
+    filtered.sort((a, b) => {
+      const aClaimed = a.claims?.some((c) => c.tent_id === tentId) ? 0 : 1;
+      const bClaimed = b.claims?.some((c) => c.tent_id === tentId) ? 0 : 1;
+      return aClaimed - bClaimed;
+    });
+
+    setExpenseItems(filtered.map((item) => ({ id: item.id, name: item.name })));
   }, []);
 
   useEffect(() => {

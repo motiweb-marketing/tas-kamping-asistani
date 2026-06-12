@@ -98,7 +98,79 @@ export default function ItemsReviewPage() {
       ) : filteredItems.length === 0 ? (
         <p className="text-lg text-gray-500">Aramanızla eşleşen malzeme yok.</p>
       ) : (
-        <div className="overflow-x-auto">
+        <>
+        <div className="flex flex-col gap-4 md:hidden">
+          {filteredItems.map((item) => (
+            <div key={item.id} className="rounded-xl border-2 border-gray-200 p-4">
+              <label className="mb-1 block text-sm font-medium">Ad</label>
+              <input
+                value={item.name}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  setField(item.id, { name: v });
+                  debouncedPatch(item.id, { name: v });
+                }}
+                className="mb-3 w-full rounded border px-3 py-2 text-base"
+              />
+              <label className="mb-1 block text-sm font-medium">Miktar</label>
+              <input
+                value={item.quantity}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  setField(item.id, { quantity: v });
+                  debouncedPatch(item.id, { quantity: v });
+                }}
+                className="mb-3 w-full rounded border px-3 py-2 text-base"
+              />
+              <label className="mb-1 block text-sm font-medium">Kategori</label>
+              <select
+                value={item.category}
+                onChange={(e) =>
+                  patch(item.id, { category: e.target.value as Item['category'] })
+                }
+                className="mb-3 w-full rounded border px-3 py-2"
+              >
+                <option value="food">Yiyecek</option>
+                <option value="equipment">Ekipman</option>
+              </select>
+              <label className="mb-1 block text-sm font-medium">Not</label>
+              <input
+                value={item.notes || ''}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  setField(item.id, { notes: v });
+                  debouncedPatch(item.id, { notes: v });
+                }}
+                placeholder="Örn: organik tercih"
+                className="mb-3 w-full rounded border px-3 py-2 text-base"
+              />
+              <label className="mb-1 block text-sm font-medium">Çadır (opsiyonel)</label>
+              <select
+                value={item.assigned_tent_id || ''}
+                onChange={(e) =>
+                  patch(item.id, { assigned_tent_id: e.target.value || null })
+                }
+                className="mb-3 w-full rounded border px-3 py-2"
+              >
+                <option value="">— Üstlenilmedi —</option>
+                {tents.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.name}
+                  </option>
+                ))}
+              </select>
+              <button
+                type="button"
+                onClick={() => deleteItem(item.id)}
+                className="min-h-[44px] w-full rounded-lg bg-red-100 font-medium text-red-700"
+              >
+                Sil
+              </button>
+            </div>
+          ))}
+        </div>
+
+        <div className="hidden overflow-x-auto md:block">
           <table className="w-full table-fixed text-left text-base">
             <thead>
               <tr className="border-b">
@@ -193,6 +265,7 @@ export default function ItemsReviewPage() {
             </tbody>
           </table>
         </div>
+        </>
       )}
     </div>
   );

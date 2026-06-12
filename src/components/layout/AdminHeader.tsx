@@ -17,7 +17,7 @@ export default function AdminHeader() {
   return (
     <header className="sticky top-0 z-40 border-b bg-white px-4 py-3">
       <div className="mb-2 flex items-center justify-between gap-2">
-        <h1 className="text-lg font-bold text-emerald-800">Admin Paneli</h1>
+        <h1 className="text-lg font-bold text-emerald-800">Kamp Asistanı — Admin</h1>
         <div className="flex items-center gap-2">
           <Link href="/items" className="rounded-lg bg-gray-100 px-3 py-1.5 text-sm text-gray-700">
             Uygulama

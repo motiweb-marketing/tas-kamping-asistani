@@ -1,4 +1,11 @@
+import type { Metadata } from 'next';
 import { Suspense } from 'react';
+import { SITE } from '@/lib/site-config';
+
+export const metadata: Metadata = {
+  title: 'Giriş',
+  description: `${SITE.name} — çadır veya organizatör girişi.`,
+};
 
 export default function LoginLayout({
   children,

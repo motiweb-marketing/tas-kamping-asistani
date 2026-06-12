@@ -11,7 +11,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const {
       name,
-      location = 'Taş Kamping',
+      location = 'Kamp alanı',
       start_date,
       end_date,
       admin_name,
@@ -36,6 +36,9 @@ export async function POST(request: NextRequest) {
         start_date,
         end_date,
         admin_id: null,
+        plan_tier: 'trial',
+        max_tents: 1,
+        max_users: 2,
       })
       .select()
       .single();

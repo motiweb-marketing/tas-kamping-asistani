@@ -1,4 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
+import {
+  getCampaignLimits,
+  limitErrorMessage,
+  upgradeHint,
+} from '@/lib/campaign-limits';
 import { formatTitleCase } from '@/lib/format';
 import { getSession } from '@/lib/session';
 import { createServerClient } from '@/lib/supabase/server';
@@ -36,6 +41,14 @@ export async function POST(request: NextRequest) {
   }
 
   const supabase = createServerClient();
+  const limits = await getCampaignLimits(supabase, session.user.campaign_id);
+  if (!limits.can_add_tent) {
+    return NextResponse.json(
+      { error: limitErrorMessage('tent', limits), limits, upgrade: upgradeHint() },
+      { status: 403 }
+    );
+  }
+
   const { data, error } = await supabase
     .from('tents')
     .insert({ campaign_id: session.user.campaign_id, name })

@@ -8,7 +8,7 @@ export default function SetupPage() {
   const router = useRouter();
   const [form, setForm] = useState({
     name: '',
-    location: 'Taş Kamping',
+    location: 'Kamp alanı',
     start_date: '',
     end_date: '',
     admin_name: '',
@@ -66,9 +66,17 @@ export default function SetupPage() {
       </Link>
 
       <h1 className="mb-2 text-2xl font-bold">Yeni Kamp Oluştur</h1>
-      <p className="mb-6 text-base text-gray-600">
+      <p className="mb-4 text-base text-gray-600">
         Admin de kampın bir parçasıdır — adınızı ve çadırınızı girin.
       </p>
+
+      <div className="mb-6 rounded-xl border-2 border-emerald-200 bg-emerald-50 p-4 text-emerald-900">
+        <p className="font-semibold">Ücretsiz deneme</p>
+        <p className="mt-1 text-sm">
+          1 çadır, en fazla 2 kişi — tüm özellikleri deneyin. Limit sonrası tam sürüm için
+          iletişime geçebilirsiniz.
+        </p>
+      </div>
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         {fields.map(({ key, label, type }) => (
