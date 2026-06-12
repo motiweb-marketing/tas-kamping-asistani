@@ -11,7 +11,6 @@ function TentLoginForm() {
 
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const [campaignId, setCampaignId] = useState(searchParams.get('campaign') || '');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -26,7 +25,6 @@ function TentLoginForm() {
       body: JSON.stringify({
         username,
         password,
-        campaign_id: campaignId,
         mode: 'tent',
       }),
     });
@@ -46,18 +44,6 @@ function TentLoginForm() {
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-4">
       <div>
-        <label className="mb-1 block text-lg font-medium">Kamp Kodu</label>
-        <input
-          type="text"
-          value={campaignId}
-          onChange={(e) => setCampaignId(e.target.value)}
-          placeholder="Organizatörden aldığınız kod"
-          className="w-full rounded-xl border-2 border-gray-300 px-4 py-3 text-lg focus:border-emerald-500 focus:outline-none"
-          required
-        />
-      </div>
-
-      <div>
         <label className="mb-1 block text-lg font-medium">Kullanıcı Adı</label>
         <input
           type="text"
@@ -65,6 +51,7 @@ function TentLoginForm() {
           onChange={(e) => setUsername(e.target.value)}
           className="w-full rounded-xl border-2 border-gray-300 px-4 py-3 text-lg focus:border-emerald-500 focus:outline-none"
           required
+          autoComplete="username"
         />
       </div>
 
@@ -76,6 +63,7 @@ function TentLoginForm() {
           onChange={(e) => setPassword(e.target.value)}
           className="w-full rounded-xl border-2 border-gray-300 px-4 py-3 text-lg focus:border-emerald-500 focus:outline-none"
           required
+          autoComplete="current-password"
         />
       </div>
 
@@ -104,7 +92,7 @@ export default function LoginPage() {
 
         <h1 className="mb-2 text-2xl font-bold">Çadıra Giriş Yap</h1>
         <p className="mb-6 text-base text-gray-600">
-          Adminin size verdiği kamp kodu, kullanıcı adı ve şifre ile giriş yapın.
+          Adminin size verdiği kullanıcı adı ve şifre ile giriş yapın.
         </p>
 
         <Suspense fallback={<p className="text-gray-500">Yükleniyor...</p>}>

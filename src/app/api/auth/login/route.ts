@@ -21,20 +21,28 @@ export async function POST(request: NextRequest) {
     const supabase = createServerClient();
 
     if (loginMode === 'tent') {
-      if (!campaign_id) {
-        return NextResponse.json({ error: 'Kamp kodu gerekli' }, { status: 400 });
-      }
-
-      const { data: user, error } = await supabase
+      const { data: users, error } = await supabase
         .from('users')
         .select('*')
         .eq('username', username)
-        .eq('campaign_id', campaign_id)
-        .eq('role', 'user')
-        .maybeSingle();
+        .eq('role', 'user');
 
-      if (error || !user) {
+      if (error || !users?.length) {
         return NextResponse.json({ error: 'Kullanıcı bulunamadı' }, { status: 401 });
+      }
+
+      let user = users[0];
+      if (campaign_id) {
+        const matched = users.find((u) => u.campaign_id === campaign_id);
+        if (!matched) {
+          return NextResponse.json({ error: 'Kullanıcı bulunamadı' }, { status: 401 });
+        }
+        user = matched;
+      } else if (users.length > 1) {
+        return NextResponse.json(
+          { error: 'Bu kullanıcı adı birden fazla kampta kayıtlı. Organizatörle iletişime geçin.' },
+          { status: 400 }
+        );
       }
 
       const valid = await verifyPassword(password, user.password_hash);
@@ -65,16 +73,18 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Admin bulunamadı' }, { status: 401 });
     }
 
-    if (admins.length > 1 && !campaign_id) {
+    const user = campaign_id
+      ? admins.find((a) => a.campaign_id === campaign_id) || null
+      : admins.length === 1
+        ? admins[0]
+        : null;
+
+    if (!user && admins.length > 1) {
       return NextResponse.json(
-        { error: 'Birden fazla admin hesabı var; kamp kodu gerekli' },
+        { error: 'Birden fazla admin hesabı var. Doğru kamp için giriş yapın.' },
         { status: 400 }
       );
     }
-
-    const user = campaign_id
-      ? admins.find((a) => a.campaign_id === campaign_id) || null
-      : admins[0];
 
     if (!user) {
       return NextResponse.json({ error: 'Admin bulunamadı' }, { status: 401 });

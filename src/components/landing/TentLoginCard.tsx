@@ -10,7 +10,7 @@ export default function TentLoginCard() {
           </p>
           <h2 className="mt-4 text-2xl font-bold sm:text-3xl">Çadırına bağlan</h2>
           <p className="mx-auto mt-3 max-w-lg text-lg text-emerald-100">
-            Organizatörün paylaştığı kamp kodu ve şifrenle giriş yap; listeni gör,
+            Kullanıcı adın ve şifrenle giriş yap; listeni gör,
             görev al, sohbete katıl.
           </p>
           <Link

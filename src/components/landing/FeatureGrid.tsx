@@ -48,7 +48,7 @@ const FEATURES = [
 const STEPS = [
   { step: '1', title: 'Organizatör admin girişi yapar', desc: 'Kamp oluşturur, çadır ve kişi ekler.' },
   { step: '2', title: 'Menü ve listeyi hazırlar', desc: 'AI ile malzeme listesi, nöbet planı otomatik.' },
-  { step: '3', title: 'Katılımcılar çadır girişi yapar', desc: 'Kamp kodu + şifre ile uygulamaya bağlanır.' },
+  { step: '3', title: 'Katılımcılar çadır girişi yapar', desc: 'Kullanıcı adı ve şifre ile uygulamaya bağlanır.' },
 ];
 
 export default function FeatureGrid() {
