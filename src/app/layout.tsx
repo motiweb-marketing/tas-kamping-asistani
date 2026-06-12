@@ -1,6 +1,22 @@
 import type { Metadata, Viewport } from 'next';
+import { JetBrains_Mono, Plus_Jakarta_Sans, Space_Grotesk } from 'next/font/google';
 import { SITE } from '@/lib/site-config';
 import './globals.css';
+
+const plusJakarta = Plus_Jakarta_Sans({
+  subsets: ['latin', 'latin-ext'],
+  variable: '--font-sans',
+});
+
+const spaceGrotesk = Space_Grotesk({
+  subsets: ['latin', 'latin-ext'],
+  variable: '--font-display',
+});
+
+const jetbrainsMono = JetBrains_Mono({
+  subsets: ['latin', 'latin-ext'],
+  variable: '--font-mono',
+});
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE.url),
@@ -62,7 +78,9 @@ export default function RootLayout({
 }) {
   return (
     <html lang="tr">
-      <body className="min-h-screen">{children}</body>
+      <body className={`${plusJakarta.variable} ${spaceGrotesk.variable} ${jetbrainsMono.variable} min-h-screen font-sans`}>
+        {children}
+      </body>
     </html>
   );
 }
