@@ -19,7 +19,7 @@ import LogoutButton from '@/components/layout/LogoutButton';
 import { SITE } from '@/lib/site-config';
 
 const NAV = [
-  { href: '/admin/kurulum', label: 'Kurulum sihirbazı', icon: Wand2, highlight: true },
+  { href: '/admin/kurulum', label: 'Program tanıtımı', icon: Wand2, highlight: true },
   { href: '/admin', label: 'Genel bakış', icon: LayoutDashboard },
   { type: 'divider' as const, label: 'Düzenle' },
   { href: '/admin/kamp', label: 'Kamp bilgileri', icon: Calendar },

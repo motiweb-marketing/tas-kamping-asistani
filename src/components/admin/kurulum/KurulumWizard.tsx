@@ -4,13 +4,8 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useCallback, useEffect, useState } from 'react';
 import AuthButton from '@/components/auth/AuthButton';
-import {
-  SETUP_STEPS,
-  firstIncompleteStep,
-  getStepCompletion,
-  type SetupProgressInput,
-} from '@/lib/admin-setup';
-import KurulumSkippedNotice from './KurulumSkippedNotice';
+import { SETUP_STEPS } from '@/lib/admin-setup';
+import { TOUR_STEP_TIPS, isAdminTourDone, markAdminTourDone } from '@/lib/admin-tour';
 import KurulumStepBar from './KurulumStepBar';
 import StepFrame from './StepFrame';
 import Step1Kamp from './steps/Step1Kamp';
@@ -18,6 +13,8 @@ import Step3Ucret from './steps/Step3Ucret';
 import Step4MenuGuide from './steps/Step4MenuGuide';
 import Step5ListeGuide from './steps/Step5ListeGuide';
 import Step6Paylas from './steps/Step6Paylas';
+import TourTip from './TourTip';
+import TourWelcome from './TourWelcome';
 import TentsManager from '@/components/admin/TentsManager';
 
 function KurulumWizardInner() {
@@ -25,85 +22,86 @@ function KurulumWizardInner() {
   const searchParams = useSearchParams();
   const adim = Math.min(6, Math.max(1, Number(searchParams.get('adim')) || 1));
 
-  const [progress, setProgress] = useState<SetupProgressInput | null>(null);
-  const [completed, setCompleted] = useState<Record<number, boolean>>({});
+  const [showWelcome, setShowWelcome] = useState(false);
+  const [userCount, setUserCount] = useState(0);
 
-  const loadProgress = useCallback(async () => {
-    const [campRes, tentsRes, usersRes, itemsRes, menusRes, menuDayRes] = await Promise.all([
-      fetch('/api/campaign'),
-      fetch('/api/tents'),
-      fetch('/api/users'),
-      fetch('/api/items?scope=shared'),
-      fetch('/api/menus'),
-      fetch('/api/menus/day'),
-    ]);
-    const camp = (await campRes.json()).campaign;
-    const tents = (await tentsRes.json()).tents || [];
-    const users = (await usersRes.json()).users || [];
-    const items = (await itemsRes.json()).items || [];
-    const menus = (await menusRes.json()).menus || [];
-    const menuDay = await menuDayRes.json();
-    const hasMenuContent = (menuDay.days || []).some(
-      (d: { breakfast?: string; meal?: string; snack?: string }) =>
-        d.breakfast?.trim() || d.meal?.trim() || d.snack?.trim()
-    );
-
-    const input: SetupProgressInput = {
-      campaignName: camp?.name || '',
-      hasDates: !!(camp?.start_date && camp?.end_date),
-      tentCount: tents.length,
-      userCount: users.length,
-      menuCount: menus.length > 0 ? menus.length : hasMenuContent ? 1 : 0,
-      itemCount: items.length,
-      isMenuPublished: !!menuDay.is_published,
-      hasPublishedItems: items.length > 0,
-    };
-    setProgress(input);
-    const comp = getStepCompletion(input);
-    if (typeof window !== 'undefined') {
-      try {
-        if (localStorage.getItem('kamp-asistani-shared-creds')) comp[6] = true;
-      } catch { /* ignore */ }
-    }
-    setCompleted(comp);
+  const loadUserCount = useCallback(async () => {
+    const res = await fetch('/api/users');
+    const data = await res.json();
+    setUserCount((data.users || []).length);
   }, []);
 
   useEffect(() => {
-    loadProgress();
-  }, [loadProgress, adim]);
+    loadUserCount();
+  }, [loadUserCount, adim]);
 
   useEffect(() => {
-    if (!searchParams.get('adim') && progress) {
-      const first = firstIncompleteStep(getStepCompletion(progress));
-      router.replace(`/admin/kurulum?adim=${first}`);
+    const welcome = searchParams.get('welcome') === '1';
+    const tourDone = isAdminTourDone();
+    if ((welcome || !tourDone) && !searchParams.get('adim')) {
+      setShowWelcome(true);
     }
-  }, [searchParams, progress, router]);
+  }, [searchParams]);
 
   const step = SETUP_STEPS.find((s) => s.id === adim)!;
+  const tip = TOUR_STEP_TIPS[adim];
 
   function goTo(next: number) {
     router.push(`/admin/kurulum?adim=${next}`);
-    loadProgress();
+  }
+
+  function skipTour() {
+    markAdminTourDone();
+    setShowWelcome(false);
+    router.push('/admin');
+  }
+
+  function startTour() {
+    setShowWelcome(false);
+    router.replace('/admin/kurulum?adim=1');
+  }
+
+  function finishTour() {
+    markAdminTourDone();
+    router.push('/admin');
   }
 
   return (
     <div>
-      <header className="mb-6">
-        <h1 className="font-display text-2xl font-bold text-forest-950">Kamp kurulum sihirbazı</h1>
-        <p className="mt-1 text-sm text-forest-600">
-          Adım adım ilerleyin. Her bilgiyi sonra sol menüden düzenleyebilirsiniz.
-        </p>
+      {showWelcome && <TourWelcome onStart={startTour} onSkip={skipTour} />}
+
+      <header className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h1 className="font-display text-2xl font-bold text-forest-950">Program tanıtımı</h1>
+          <p className="mt-1 text-sm text-forest-600">
+            Adım {adim} / {SETUP_STEPS.length} — Kamp Asistanı&apos;nın nasıl çalıştığını öğrenin.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={skipTour}
+          className="shrink-0 self-start text-sm font-semibold text-forest-500 underline hover:text-forest-800"
+        >
+          Tanıtımı atla
+        </button>
       </header>
 
-      <KurulumStepBar current={adim} completed={completed} />
+      <KurulumStepBar current={adim} />
 
-      {progress && adim > 1 && (
-        <KurulumSkippedNotice currentStep={adim} progress={progress} />
-      )}
+      <TourTip
+        tip={tip}
+        variant={adim === 2 && userCount < 2 ? 'highlight' : 'default'}
+      />
 
       <StepFrame title={step.title} description={step.description}>
-        {adim === 1 && <Step1Kamp onSaved={loadProgress} />}
-        {adim === 2 && <TentsManager showShareButtons={false} />}
+        {adim === 1 && <Step1Kamp />}
+        {adim === 2 && (
+          <TentsManager
+            showShareButtons={false}
+            tourMode
+            onUsersChange={setUserCount}
+          />
+        )}
         {adim === 3 && <Step3Ucret />}
         {adim === 4 && <Step4MenuGuide />}
         {adim === 5 && <Step5ListeGuide />}
@@ -112,25 +110,34 @@ function KurulumWizardInner() {
 
       <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-between">
         {adim > 1 ? (
-          <AuthButton type="button" variant="secondary" onClick={() => goTo(adim - 1)} className="sm:w-auto sm:min-w-[140px]">
+          <AuthButton
+            type="button"
+            variant="secondary"
+            onClick={() => goTo(adim - 1)}
+            className="sm:w-auto sm:min-w-[140px]"
+          >
             ← Geri
           </AuthButton>
         ) : (
           <div />
         )}
         {adim < 6 ? (
-          <AuthButton type="button" onClick={() => goTo(adim + 1)} className="sm:ml-auto sm:w-auto sm:min-w-[140px]">
+          <AuthButton
+            type="button"
+            onClick={() => goTo(adim + 1)}
+            className="sm:ml-auto sm:w-auto sm:min-w-[140px]"
+          >
             İleri →
           </AuthButton>
         ) : (
-          <Link href="/admin" className="sm:ml-auto">
-            <AuthButton type="button">Kurulumu bitir — panele git</AuthButton>
-          </Link>
+          <AuthButton type="button" onClick={finishTour} className="sm:ml-auto sm:min-w-[200px]">
+            Tanıtımı bitir — panele git
+          </AuthButton>
         )}
       </div>
 
       <p className="mt-4 text-center text-xs text-forest-500">
-        Bu adımı sonra düzenlemek için:{' '}
+        Bu bölümü sonra düzenlemek için:{' '}
         <Link href={step.editHref} className="font-semibold underline">
           {step.title}
         </Link>

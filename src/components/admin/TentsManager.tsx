@@ -23,7 +23,15 @@ export function copyLoginInfo(username: string) {
   });
 }
 
-export default function TentsManager({ showShareButtons = true }: { showShareButtons?: boolean }) {
+export default function TentsManager({
+  showShareButtons = true,
+  tourMode = false,
+  onUsersChange,
+}: {
+  showShareButtons?: boolean;
+  tourMode?: boolean;
+  onUsersChange?: (count: number) => void;
+}) {
   const [tents, setTents] = useState<Tent[]>([]);
   const [users, setUsers] = useState<SafeUser[]>([]);
   const [limits, setLimits] = useState<CampaignLimits | null>(null);
@@ -42,9 +50,11 @@ export default function TentsManager({ showShareButtons = true }: { showShareBut
     const tData = await tRes.json();
     const uData = await uRes.json();
     const cData = await cRes.json();
+    const loadedUsers = uData.users || [];
     setTents(tData.tents || []);
-    setUsers(uData.users || []);
+    setUsers(loadedUsers);
     setLimits(cData.limits || null);
+    onUsersChange?.(loadedUsers.length);
   }
 
   useEffect(() => { load(); }, []);
@@ -93,8 +103,21 @@ export default function TentsManager({ showShareButtons = true }: { showShareBut
 
   return (
     <div className="space-y-8">
-      {limits && <TrialLimitHint limits={limits} />}
+      {limits && !tourMode && <TrialLimitHint limits={limits} />}
       {error && <AuthAlert>{error}</AuthAlert>}
+
+      {tourMode && users.length < 2 && (
+        <div className="rounded-xl border-2 border-dashed border-forest-300 bg-forest-50/80 px-4 py-3 text-sm text-forest-800">
+          <strong>Şu an {users.length} kişi var</strong> (organizatör — siz).
+          Aşağıdan <strong>en az 1 katılımcı daha</strong> ekleyin; herkesin kendi girişi olur.
+        </div>
+      )}
+
+      {tourMode && users.length >= 2 && (
+        <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
+          Harika — {users.length} kişi eklendi. Katılımcılar giriş yapınca listeyi, harcamayı ve nöbeti görebilir.
+        </div>
+      )}
 
       <section className="space-y-4">
         <h3 className="font-display text-lg font-bold text-forest-950">Çadır ekle</h3>

@@ -1,21 +1,14 @@
 import Link from 'next/link';
 import PlanBadge from '@/components/admin/PlanBadge';
-import { fetchSetupProgress } from '@/lib/admin-setup-server';
 import { getCampaignLimits } from '@/lib/campaign-limits';
 import { getSession } from '@/lib/session';
 import { createServerClient } from '@/lib/supabase/server';
 import type { Campaign } from '@/types';
-import { redirect } from 'next/navigation';
 
 export default async function AdminPage() {
   const session = await getSession();
   const supabase = createServerClient();
   const campaignId = session.user!.campaign_id;
-
-  const { allRequiredDone } = await fetchSetupProgress(campaignId);
-  if (!allRequiredDone) {
-    redirect('/admin/kurulum');
-  }
 
   const { data: campaignData } = (await supabase
     .from('campaigns')
@@ -40,7 +33,7 @@ export default async function AdminPage() {
   ];
 
   const quickLinks = [
-    { href: '/admin/kurulum', label: 'Kurulum sihirbazı' },
+    { href: '/admin/kurulum', label: 'Program tanıtımı' },
     { href: '/summary', label: 'Kamp özeti — kim ne getiriyor?' },
     { href: '/admin/hazir-listeler', label: 'Hazır listeler (kişisel & çadır)' },
     { href: '/admin/liste', label: 'Ortak alışveriş listesi' },

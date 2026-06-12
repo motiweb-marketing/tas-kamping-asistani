@@ -63,7 +63,7 @@ export default function SetupPage() {
       return;
     }
 
-    router.push('/admin/kurulum');
+    router.push('/admin/kurulum?welcome=1');
     router.refresh();
   }
 
