@@ -3,6 +3,7 @@ import { hashPassword } from '@/lib/auth';
 import { generateCampDutyPlan } from '@/lib/camp-plan';
 import { ensureCampaignRecommendations } from '@/lib/recommendations';
 import { formatPersonName, formatTitleCase } from '@/lib/format';
+import { notifyNewTrialRegistration } from '@/lib/notify-owner';
 import { getSession } from '@/lib/session';
 import { createServerClient } from '@/lib/supabase/server';
 
@@ -56,6 +57,7 @@ export async function POST(request: NextRequest) {
       .insert({
         campaign_id: campaign.id,
         name: formatTitleCase(admin_tent_name),
+        max_capacity: 4,
       })
       .select()
       .single();
@@ -111,6 +113,17 @@ export async function POST(request: NextRequest) {
     };
     session.isLoggedIn = true;
     await session.save();
+
+    void notifyNewTrialRegistration({
+      campaignId: campaign.id,
+      campaignName: campaign.name,
+      location: campaign.location,
+      startDate: campaign.start_date,
+      endDate: campaign.end_date,
+      adminName: admin.name,
+      adminUsername: admin.username,
+      adminTentName: tent.name,
+    }).catch((e) => console.error('[notify] Deneme bildirimi başarısız:', e));
 
     const { password_hash: _, ...safeAdmin } = admin;
     return NextResponse.json({ campaign, admin: safeAdmin });

@@ -56,7 +56,10 @@ Write-Host "Vercel environment variables yukleniyor..." -ForegroundColor Cyan
 $optional = @(
     "PLATFORM_ADMIN_USERNAME",
     "PLATFORM_ADMIN_PASSWORD",
-    "PLATFORM_OPENROUTER_API_KEY"
+    "PLATFORM_OPENROUTER_API_KEY",
+    "RESEND_API_KEY",
+    "NOTIFY_FROM_EMAIL",
+    "PLATFORM_NOTIFY_EMAIL"
 )
 
 function Push-VercelEnv($name) {
