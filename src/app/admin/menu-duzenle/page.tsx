@@ -233,7 +233,7 @@ export default function CampSettingsPage() {
       setError(data.error || 'Hata oluştu');
       return;
     }
-    setMessage(`${data.count} malzeme oluşturuldu. Review ekranından kontrol edin.`);
+    setMessage(`${data.count} kamp ihtiyacı oluşturuldu. Listeler → Kamp ihtiyaçları sayfasından kontrol edip yayınlayın.`);
   }
 
   const hasMenuContent = days.some(

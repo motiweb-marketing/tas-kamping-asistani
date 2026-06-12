@@ -196,8 +196,8 @@ export default function LandingPage() {
                 transition={{ delay: 0.2 }}
                 className="max-w-xl text-sm font-normal leading-relaxed text-forest-700 sm:text-base"
               >
-                WhatsApp kalabalığında kaybolmayın. {SITE.name} ile ortak listenizi hazırlayın, çadırlar malzeme
-                üstlensin, harcamaları adil bölüşün, nöbetleri dağıtın.
+                WhatsApp kalabalığında kaybolmayın. Menüyü yazın, üç katmanlı listeleri oluşturun (kişisel, çadır,
+                kamp), çadırlar üstlensin, harcamaları adil bölüşün.
               </motion.p>
 
               <motion.div
@@ -309,10 +309,10 @@ export default function LandingPage() {
               <h3 className="font-display text-lg font-bold text-forest-900">✅ {SITE.name} çözümü</h3>
               <ul className="space-y-3.5 text-xs text-forest-800">
                 {[
-                  'Tek ortak malzeme listesi — canlı ve paylaşımlı',
+                  'Üç liste: kişisel, çadır ve kamp ihtiyaçları',
+                  'Menü → AI liste → düzenle → yayınla akışı',
                   'Nöbet planı — çadır başına adil dağılım',
                   'Harcama ve bakiye — otomatik paylaşım hesabı',
-                  'Menü ve alışveriş — tek yerden planlama',
                 ].map((t) => (
                   <li key={t} className="flex items-start gap-2.5">
                     <CheckCircle className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />

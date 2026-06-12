@@ -10,6 +10,7 @@ import {
   Settings,
   Share2,
   Tent,
+  User,
   Users,
   Wallet,
   Wand2,
@@ -26,8 +27,10 @@ const NAV = [
   { href: '/admin/cadirlar', label: 'Çadırlar & kişiler', icon: Users },
   { href: '/admin/ucret', label: 'Konaklama ücreti', icon: Wallet },
   { href: '/admin/menu-duzenle', label: 'Menü', icon: ClipboardList },
-  { href: '/admin/liste', label: 'Alışveriş listesi', icon: ListChecks },
-  { href: '/admin/hazir-listeler', label: 'Hazır listeler', icon: Tent },
+  { type: 'divider' as const, label: 'Listeler' },
+  { href: '/admin/listeler/kisisel', label: 'Kişisel ihtiyaçlar', icon: User },
+  { href: '/admin/listeler/cadir', label: 'Çadır ihtiyaçları', icon: Tent },
+  { href: '/admin/listeler/kamp', label: 'Kamp ihtiyaçları', icon: ListChecks },
   { type: 'divider' as const, label: 'Sistem' },
   { href: '/admin/ayarlar', label: 'Ayarlar (AI)', icon: Settings },
   { href: '/admin/paylas', label: 'Giriş bilgisi paylaş', icon: Share2 },
@@ -38,6 +41,9 @@ export default function AdminSidebar() {
 
   function isActive(href: string) {
     if (href === '/admin') return pathname === '/admin';
+    if (href.startsWith('/admin/listeler/')) {
+      return pathname === href || pathname.startsWith(`${href}/`);
+    }
     return pathname === href || pathname.startsWith(`${href}/`);
   }
 

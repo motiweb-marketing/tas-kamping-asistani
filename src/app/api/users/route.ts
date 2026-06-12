@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { hashPassword } from '@/lib/auth';
 import {
+  countUsersInTent,
   getCampaignLimits,
   limitErrorMessage,
   upgradeHint,
@@ -52,6 +53,16 @@ export async function POST(request: NextRequest) {
       { error: limitErrorMessage('user', limits), limits, upgrade: upgradeHint() },
       { status: 403 }
     );
+  }
+
+  if (tent_id) {
+    const inTent = await countUsersInTent(supabase, tent_id);
+    if (inTent >= limits.max_users_per_tent) {
+      return NextResponse.json(
+        { error: limitErrorMessage('tent_full', limits), limits },
+        { status: 403 }
+      );
+    }
   }
 
   const { data, error } = await supabase

@@ -14,18 +14,18 @@ type Tab = ItemListScope;
 const TABS: { id: Tab; label: string; hint: string }[] = [
   {
     id: 'personal',
-    label: 'Kişisel',
+    label: 'Kişisel ihtiyaçlar',
     hint: 'Kendiniz için getirmeniz gerekenler.',
   },
   {
     id: 'tent',
-    label: 'Çadırımız',
+    label: 'Çadır ihtiyaçları',
     hint: 'Çadırınızın bulundurması gereken ekipman.',
   },
   {
     id: 'shared',
-    label: 'Ortak',
-    hint: 'Birlikte alınan malzemeler — adet seçerek üstlenin.',
+    label: 'Kamp ihtiyaçları',
+    hint: 'Tüm kampın ortak listesi — çadırınız adet seçerek üstlenir.',
   },
 ];
 

@@ -1,7 +1,10 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import TrialLimitHint from '@/components/admin/TrialLimitHint';
+import { useCallback, useEffect, useState } from 'react';
+import { Plus } from 'lucide-react';
+import TentDetailModal from '@/components/admin/TentDetailModal';
+import TentUpgradeModal from '@/components/admin/TentUpgradeModal';
+import TrialQuotaHint from '@/components/admin/TrialQuotaHint';
 import { markCredentialsShared } from '@/components/admin/SetupChecklist';
 import AuthAlert from '@/components/auth/AuthAlert';
 import AuthButton from '@/components/auth/AuthButton';
@@ -35,13 +38,13 @@ export default function TentsManager({
   const [tents, setTents] = useState<Tent[]>([]);
   const [users, setUsers] = useState<SafeUser[]>([]);
   const [limits, setLimits] = useState<CampaignLimits | null>(null);
+  const [selectedTent, setSelectedTent] = useState<Tent | null>(null);
+  const [showAddTent, setShowAddTent] = useState(false);
   const [tentName, setTentName] = useState('');
-  const [userForm, setUserForm] = useState({
-    name: '', age: '30', username: '', password: '', tent_id: '',
-  });
+  const [upgradeReason, setUpgradeReason] = useState<'tent' | 'user' | null>(null);
   const [error, setError] = useState('');
 
-  async function load() {
+  const load = useCallback(async () => {
     const [tRes, uRes, cRes] = await Promise.all([
       fetch('/api/tents'),
       fetch('/api/users'),
@@ -51,15 +54,35 @@ export default function TentsManager({
     const uData = await uRes.json();
     const cData = await cRes.json();
     const loadedUsers = uData.users || [];
-    setTents(tData.tents || []);
+    const loadedTents = tData.tents || [];
+    setTents(loadedTents);
     setUsers(loadedUsers);
     setLimits(cData.limits || null);
     onUsersChange?.(loadedUsers.length);
+    setSelectedTent((prev) =>
+      prev ? loadedTents.find((t: Tent) => t.id === prev.id) || null : null
+    );
+  }, [onUsersChange]);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  function usersInTent(tentId: string) {
+    return users.filter((u) => u.tent_id === tentId);
   }
 
-  useEffect(() => { load(); }, []);
+  function handleAddTentClick() {
+    if (limits && !limits.can_add_tent) {
+      setUpgradeReason('tent');
+      return;
+    }
+    setShowAddTent(true);
+    setTentName('');
+    setError('');
+  }
 
-  async function addTent(e: React.FormEvent) {
+  async function submitAddTent(e: React.FormEvent) {
     e.preventDefault();
     setError('');
     const res = await fetch('/api/tents', {
@@ -67,28 +90,20 @@ export default function TentsManager({
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name: tentName }),
     });
+    const data = await res.json();
     if (!res.ok) {
-      setError((await res.json()).error || 'Çadır eklenemedi');
+      if (res.status === 403) {
+        setShowAddTent(false);
+        setUpgradeReason('tent');
+        return;
+      }
+      setError(data.error || 'Çadır eklenemedi');
       return;
     }
+    setShowAddTent(false);
     setTentName('');
-    load();
-  }
-
-  async function addUser(e: React.FormEvent) {
-    e.preventDefault();
-    setError('');
-    const res = await fetch('/api/users', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ...userForm, age: Number(userForm.age) }),
-    });
-    if (!res.ok) {
-      setError((await res.json()).error || 'Kişi eklenemedi');
-      return;
-    }
-    setUserForm({ name: '', age: '30', username: '', password: '', tent_id: '' });
-    load();
+    await load();
+    if (data.tent) setSelectedTent(data.tent);
   }
 
   async function deleteUser(id: string) {
@@ -98,18 +113,17 @@ export default function TentsManager({
     else load();
   }
 
-  const canAddTent = limits?.can_add_tent !== false;
-  const canAddUser = limits?.can_add_user !== false;
+  const maxPerTent = limits?.max_users_per_tent ?? 4;
 
   return (
-    <div className="space-y-8">
-      {limits && !tourMode && <TrialLimitHint limits={limits} />}
+    <div className="space-y-6">
+      {limits && !tourMode && <TrialQuotaHint limits={limits} />}
       {error && <AuthAlert>{error}</AuthAlert>}
 
       {tourMode && users.length < 2 && (
         <div className="rounded-xl border-2 border-dashed border-forest-300 bg-forest-50/80 px-4 py-3 text-sm text-forest-800">
           <strong>Şu an {users.length} kişi var</strong> (organizatör — siz).
-          Aşağıdan <strong>en az 1 katılımcı daha</strong> ekleyin; herkesin kendi girişi olur.
+          Bir çadır kartına tıklayıp <strong>en az 1 katılımcı daha</strong> ekleyin.
         </div>
       )}
 
@@ -119,93 +133,94 @@ export default function TentsManager({
         </div>
       )}
 
-      <section className="space-y-4">
-        <h3 className="font-display text-lg font-bold text-forest-950">Çadır ekle</h3>
-        <form onSubmit={addTent} className="flex flex-col gap-3 sm:flex-row">
-          <AuthField
-            label="Çadır adı"
-            value={tentName}
-            onChange={(e) => setTentName(e.target.value)}
-            placeholder="ör: Büyük Kaçar Ailesi"
-            disabled={!canAddTent}
-            className="flex-1"
-            required
-          />
-          <div className="flex items-end">
-            <AuthButton type="submit" disabled={!canAddTent} className="w-full sm:w-auto sm:min-w-[120px]">
-              Ekle
-            </AuthButton>
-          </div>
-        </form>
-        <ul className="space-y-2">
-          {tents.map((t) => (
-            <li key={t.id} className="rounded-xl border border-forest-100 bg-forest-50/50 px-4 py-3 text-sm font-medium text-forest-900">
-              ⛺ {t.name}
-            </li>
-          ))}
-        </ul>
-      </section>
-
-      <section className="space-y-4">
-        <h3 className="font-display text-lg font-bold text-forest-950">Kişi ekle</h3>
-        <form onSubmit={addUser} className="grid gap-4 sm:grid-cols-2">
-          <AuthField label="Ad soyad" value={userForm.name} onChange={(e) => setUserForm({ ...userForm, name: e.target.value })} required disabled={!canAddUser} />
-          <AuthField label="Yaş" type="number" value={userForm.age} onChange={(e) => setUserForm({ ...userForm, age: e.target.value })} required disabled={!canAddUser} />
-          <AuthField label="Kullanıcı adı" value={userForm.username} onChange={(e) => setUserForm({ ...userForm, username: e.target.value })} required disabled={!canAddUser} />
-          <AuthField label="Şifre" type="password" value={userForm.password} onChange={(e) => setUserForm({ ...userForm, password: e.target.value })} required disabled={!canAddUser} />
-          <div className="sm:col-span-2">
-            <label className="mb-1.5 block text-sm font-semibold text-forest-900">Çadır</label>
-            <select
-              value={userForm.tent_id}
-              onChange={(e) => setUserForm({ ...userForm, tent_id: e.target.value })}
-              className="w-full rounded-xl border border-forest-200 bg-white px-4 py-3 text-base disabled:opacity-60"
-              disabled={!canAddUser}
-              required
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+        {tents.map((tent) => {
+          const count = usersInTent(tent.id).length;
+          const full = count >= maxPerTent;
+          return (
+            <button
+              key={tent.id}
+              type="button"
+              onClick={() => setSelectedTent(tent)}
+              className="group flex min-h-[120px] flex-col items-center justify-center rounded-2xl border-2 border-forest-200 bg-white p-4 text-center shadow-sm transition-all hover:border-forest-500 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-forest-400"
             >
-              <option value="">Seçin</option>
-              {tents.map((t) => (
-                <option key={t.id} value={t.id}>{t.name}</option>
-              ))}
-            </select>
-          </div>
-          <div className="sm:col-span-2">
-            <AuthButton type="submit" disabled={!canAddUser}>Kişi ekle</AuthButton>
-          </div>
-        </form>
+              <span className="text-3xl" aria-hidden>
+                ⛺
+              </span>
+              <span className="mt-2 line-clamp-2 text-sm font-bold text-forest-950">{tent.name}</span>
+              <span className="mt-1 text-xs text-forest-500">
+                {count}/{maxPerTent} kişi
+                {full && <span className="text-amber-700"> · dolu</span>}
+              </span>
+              <span className="mt-2 text-[10px] font-medium text-forest-400 opacity-0 transition-opacity group-hover:opacity-100">
+                Detay için tıkla
+              </span>
+            </button>
+          );
+        })}
 
-        <ul className="space-y-3">
-          {users.map((u) => (
-            <li key={u.id} className="rounded-xl border border-forest-100 bg-white p-4">
-              <p className="text-sm font-semibold text-forest-900">
-                {u.name} <span className="font-normal text-forest-500">@{u.username}</span>
-                {u.role === 'admin' && (
-                  <span className="ml-2 rounded-full bg-forest-100 px-2 py-0.5 text-xs">Admin</span>
-                )}
-              </p>
-              <div className="mt-2 flex flex-wrap gap-2">
-                {showShareButtons && (
-                  <button
-                    type="button"
-                    onClick={() => copyLoginInfo(u.username)}
-                    className="rounded-lg bg-forest-100 px-3 py-2 text-xs font-semibold text-forest-800"
-                  >
-                    Giriş bilgisini kopyala
-                  </button>
-                )}
-                {u.role !== 'admin' && (
-                  <button
-                    type="button"
-                    onClick={() => deleteUser(u.id)}
-                    className="rounded-lg bg-red-50 px-3 py-2 text-xs font-semibold text-red-700"
-                  >
-                    Sil
-                  </button>
-                )}
+        <button
+          type="button"
+          onClick={handleAddTentClick}
+          className="flex min-h-[120px] flex-col items-center justify-center rounded-2xl border-2 border-dashed border-forest-200 bg-forest-50/40 p-4 text-forest-400 transition-colors hover:border-forest-300 hover:bg-forest-50 hover:text-forest-600"
+        >
+          <Plus className="h-8 w-8 opacity-50" strokeWidth={1.5} />
+          <span className="mt-2 text-sm font-semibold">Çadır ekle</span>
+        </button>
+      </div>
+
+      {selectedTent && (
+        <TentDetailModal
+          tent={selectedTent}
+          users={users}
+          limits={limits}
+          showShareButtons={showShareButtons}
+          onClose={() => setSelectedTent(null)}
+          onRefresh={load}
+          onDeleteUser={deleteUser}
+        />
+      )}
+
+      {showAddTent && (
+        <div
+          className="fixed inset-0 z-50 flex items-end justify-center bg-forest-950/40 p-4 sm:items-center"
+          onClick={() => setShowAddTent(false)}
+          role="presentation"
+        >
+          <div
+            className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+          >
+            <h3 className="font-display text-lg font-bold text-forest-950">Yeni çadır</h3>
+            <form onSubmit={submitAddTent} className="mt-4 space-y-4">
+              <AuthField
+                label="Çadır adı"
+                value={tentName}
+                onChange={(e) => setTentName(e.target.value)}
+                placeholder="ör: Büyük Kaçar Ailesi"
+                required
+                autoFocus
+              />
+              <div className="flex gap-2">
+                <AuthButton type="button" variant="secondary" onClick={() => setShowAddTent(false)} className="flex-1">
+                  İptal
+                </AuthButton>
+                <AuthButton type="submit" className="flex-1">
+                  Ekle
+                </AuthButton>
               </div>
-            </li>
-          ))}
-        </ul>
-      </section>
+            </form>
+          </div>
+        </div>
+      )}
+
+      <TentUpgradeModal
+        open={upgradeReason !== null}
+        onClose={() => setUpgradeReason(null)}
+        reason={upgradeReason || 'tent'}
+      />
     </div>
   );
 }

@@ -56,10 +56,10 @@ export const SETUP_STEPS: SetupStep[] = [
   {
     id: 5,
     slug: 'liste',
-    title: 'Alışveriş listesi',
-    shortTitle: 'Liste',
-    description: 'Menüden alışveriş listesi oluşturun ve katılımcılara yayınlayın.',
-    editHref: '/admin/liste',
+    title: 'Listeler',
+    shortTitle: 'Listeler',
+    description: 'Kişisel, çadır ve kamp ihtiyaç listelerini oluşturun, düzenleyin ve yayınlayın.',
+    editHref: '/admin/listeler',
   },
   {
     id: 6,

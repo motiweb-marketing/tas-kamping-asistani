@@ -35,8 +35,7 @@ export default async function AdminPage() {
   const quickLinks = [
     { href: '/admin/kurulum', label: 'Program tanıtımı' },
     { href: '/summary', label: 'Kamp özeti — kim ne getiriyor?' },
-    { href: '/admin/hazir-listeler', label: 'Hazır listeler (kişisel & çadır)' },
-    { href: '/admin/liste', label: 'Ortak alışveriş listesi' },
+    { href: '/admin/listeler', label: 'Listeler (kişisel, çadır, kamp)' },
     { href: '/admin/paylas', label: 'Giriş bilgisini paylaş' },
   ];
 

@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation';
 
 export default function ChecklistsRedirect() {
-  redirect('/admin/hazir-listeler');
+  redirect('/admin/listeler');
 }

@@ -1,8 +1,8 @@
 export const BENTO_FEATURES = [
   {
-    title: 'Akıllı Ortak Malzeme Listesi',
+    title: 'Üç Katmanlı Liste Sistemi',
     description:
-      'Ortak ihtiyaçları belirleyin, çadırlar adet seçerek üstlensin. Mükerrer alımlar ve kayıp listeler tarih olsun.',
+      'Kişisel ihtiyaçlar, çadır ekipmanı ve kamp ihtiyaçları ayrı listelerde. Menüden AI ile üretin, düzenleyin, yayınlayın.',
   },
   {
     title: 'Adet / Çadır ile Üstlenme',
@@ -20,9 +20,9 @@ export const BENTO_FEATURES = [
       'Yemek, mangal, çay ve bulaşık nöbetlerini çadır başına adilce dağıtın. Kimin sırası olduğu net olsun.',
   },
   {
-    title: 'Ortak Yemek Menüsü',
+    title: 'Menüden Listeye',
     description:
-      'Kahvaltı, öğün ve ara öğünleri planlayın. AI ile alışveriş listesi üretip yayınlayın.',
+      'Önce yemek menüsünü yazın, AI kamp ihtiyaçlarını oluştursun. Kişisel ve çadır listelerini de düzenleyin.',
   },
   {
     title: 'Kamp İçi Sohbet',
@@ -50,9 +50,9 @@ export const HOW_STEPS = [
   },
   {
     step: '02',
-    title: 'Listeyi hazırlayın',
+    title: 'Menü ve listeler',
     description:
-      'Menü yazın, AI alışveriş listesi üretin, ortak listeyi yayınlayın. Çadırlara kullanıcı adı ve şifre verin.',
+      'Yemek menüsünü belirleyin. AI ile kamp ihtiyaçlarını oluşturun (veya kendiniz ekleyin). Kişisel ve çadır listelerini düzenleyin, kamp listesini yayınlayın.',
   },
   {
     step: '03',
@@ -71,7 +71,12 @@ export const FAQS = [
   {
     question: 'AI kullanmak zorunlu mu?',
     answer:
-      'Hayır. Menü ve listeyi elle de girebilirsiniz. AI, menüden alışveriş listesi üretmeyi kolaylaştırır; API anahtarı organizatör panelinden girilir.',
+      'Hayır. Menü ve üç listeyi (kişisel, çadır, kamp) elle de düzenleyebilirsiniz. AI, menüden kamp ihtiyaçları listesini üretmeyi kolaylaştırır.',
+  },
+  {
+    question: 'Üç liste ne anlama geliyor?',
+    answer:
+      'Kişisel ihtiyaçlar her katılımcının kendi çantası içindir. Çadır ihtiyaçları aile veya grup ekipmanıdır. Kamp ihtiyaçları tüm kampın ortak alışverişidir; birden fazla çadır varsa her çadır adet seçerek üstlenir.',
   },
   {
     question: 'Şifremi unuttum, ne yapmalıyım?',

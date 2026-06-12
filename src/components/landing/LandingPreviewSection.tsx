@@ -6,8 +6,8 @@ import { Sparkles } from 'lucide-react';
 
 const SLIDES = [
   {
-    title: 'Ortak Liste',
-    desc: 'Malzemeleri arayın, adet seçerek üstlenin.',
+    title: 'Kamp İhtiyaçları',
+    desc: 'Kişisel, çadır ve kamp listeleri — çadırınız adet seçerek üstlenir.',
     preview: (
       <div className="space-y-2 p-3 text-sm">
         <div className="rounded-lg bg-amber-100 p-2 font-medium text-amber-900">Domates — 2 kg kaldı</div>

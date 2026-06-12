@@ -19,10 +19,10 @@ export const TOUR_STEP_TIPS: Record<number, TourStepTip> = {
     title: 'Çadırlar ve katılımcılar',
     body: 'Organizatör olarak siz zaten 1 kişi olarak eklendiniz. Kamplar genelde en az 2 kişiyle çalışır — şimdi ikinci katılımcıyı ekleyin.',
     bullets: [
-      'Her çadır bir aile veya grup',
+      'Her çadır bir kart — tıklayınca içindekileri görürsünüz',
       'Her kişiye kullanıcı adı + şifre verirsiniz',
       'Katılımcılar telefonundan listeye, harcamaya ve nöbete bakar',
-      'Deneme sürümünde en fazla 2 kişi eklenebilir',
+      'Deneme sürümünde 1 kişi daha ekleyebilirsiniz',
     ],
   },
   3: {
@@ -40,12 +40,13 @@ export const TOUR_STEP_TIPS: Record<number, TourStepTip> = {
     ],
   },
   5: {
-    title: 'Alışveriş listesi',
-    body: 'Menüden ortak alışveriş listesi oluşturun. Katılımcılar listeden malzeme üstlenir.',
+    title: 'Listeler',
+    body: 'Üç liste katmanı: kişisel ihtiyaçlar, çadır ihtiyaçları ve kamp ihtiyaçları. Önce menü, sonra AI veya elle liste, en son yayın.',
     bullets: [
-      'AI ile taslak oluşturun, kontrol edin, yayınlayın',
-      'Yayınlanmadan katılımcılar ortak listeyi görmez',
-      'Hazır kişisel / çadır listeleri isteğe bağlı',
+      '1 — Kişisel: her katılımcının kendi çantası',
+      '2 — Çadır: aile/grup ekipmanı',
+      '3 — Kamp: ortak alışveriş; çok çadırda adet ile üstlenme',
+      'Menü → AI liste → kişisel/çadır düzenle → kamp listesini yayınla',
     ],
   },
   6: {
