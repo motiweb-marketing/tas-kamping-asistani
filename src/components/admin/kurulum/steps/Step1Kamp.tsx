@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react';
 import AuthAlert from '@/components/auth/AuthAlert';
 import AuthButton from '@/components/auth/AuthButton';
 import AuthField from '@/components/auth/AuthField';
+import DateRangeFields from '@/components/forms/DateRangeFields';
+import { dateRangeError } from '@/lib/date-range';
 
 interface Step1KampProps {
   onSaved?: () => void;
@@ -38,6 +40,13 @@ export default function Step1Kamp({ onSaved }: Step1KampProps) {
     setError('');
     setMessage('');
 
+    const rangeErr = dateRangeError(form.start_date, form.end_date);
+    if (rangeErr) {
+      setSaving(false);
+      setError(rangeErr);
+      return;
+    }
+
     const res = await fetch('/api/admin/campaign', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
@@ -71,24 +80,12 @@ export default function Step1Kamp({ onSaved }: Step1KampProps) {
         hint="Kamp alanının adı veya bölgesi"
         required
       />
-      <div className="grid gap-5 sm:grid-cols-2">
-        <AuthField
-          label="Varış tarihi"
-          type="date"
-          value={form.start_date}
-          onChange={(e) => setForm({ ...form, start_date: e.target.value })}
-          hint="İlk akşam yemeği"
-          required
-        />
-        <AuthField
-          label="Ayrılış tarihi"
-          type="date"
-          value={form.end_date}
-          onChange={(e) => setForm({ ...form, end_date: e.target.value })}
-          hint="Son kahvaltı"
-          required
-        />
-      </div>
+      <DateRangeFields
+        startDate={form.start_date}
+        endDate={form.end_date}
+        onChange={(dates) => setForm({ ...form, ...dates })}
+        required
+      />
       {error && <AuthAlert>{error}</AuthAlert>}
       {message && <AuthAlert variant="success">{message}</AuthAlert>}
       <AuthButton type="submit" loading={saving}>

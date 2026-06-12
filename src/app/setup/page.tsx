@@ -10,6 +10,8 @@ import AuthCard from '@/components/auth/AuthCard';
 import AuthField from '@/components/auth/AuthField';
 import AuthShell from '@/components/auth/AuthShell';
 import StepIndicator from '@/components/auth/StepIndicator';
+import DateRangeFields from '@/components/forms/DateRangeFields';
+import { dateRangeError } from '@/lib/date-range';
 
 const STEPS = ['Kamp bilgileri', 'Organizatör hesabı'];
 
@@ -36,8 +38,13 @@ export default function SetupPage() {
   }
 
   function nextStep() {
-    if (!form.name.trim() || !form.start_date || !form.end_date) {
-      setError('Kamp adı ve tarihler zorunludur.');
+    if (!form.name.trim()) {
+      setError('Kamp adı zorunludur.');
+      return;
+    }
+    const rangeErr = dateRangeError(form.start_date, form.end_date);
+    if (rangeErr) {
+      setError(rangeErr);
       return;
     }
     setError('');
@@ -110,24 +117,15 @@ export default function SetupPage() {
               hint="Kamp alanının adı veya bölgesi"
               required
             />
-            <div className="grid gap-5 sm:grid-cols-2">
-              <AuthField
-                label="Varış tarihi"
-                type="date"
-                value={form.start_date}
-                onChange={(e) => update('start_date', e.target.value)}
-                hint="İlk akşam yemeği"
-                required
-              />
-              <AuthField
-                label="Ayrılış tarihi"
-                type="date"
-                value={form.end_date}
-                onChange={(e) => update('end_date', e.target.value)}
-                hint="Son kahvaltı"
-                required
-              />
-            </div>
+            <DateRangeFields
+              startDate={form.start_date}
+              endDate={form.end_date}
+              onChange={(dates) => {
+                setForm((prev) => ({ ...prev, ...dates }));
+                setError('');
+              }}
+              required
+            />
 
             {error && <AuthAlert>{error}</AuthAlert>}
 

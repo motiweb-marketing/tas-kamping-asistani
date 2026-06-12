@@ -64,15 +64,17 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ error: 'Güncellenecek alan yok' }, { status: 400 });
   }
 
-  if (updates.start_date && updates.end_date && updates.end_date < updates.start_date) {
-    return NextResponse.json({ error: 'Ayrılış tarihi varıştan önce olamaz' }, { status: 400 });
-  }
-
   const { data: existing } = await supabase
     .from('campaigns')
     .select('start_date, end_date')
     .eq('id', campaignId)
     .single();
+
+  const effectiveStart = String(updates.start_date ?? existing?.start_date ?? '');
+  const effectiveEnd = String(updates.end_date ?? existing?.end_date ?? '');
+  if (effectiveStart && effectiveEnd && effectiveEnd < effectiveStart) {
+    return NextResponse.json({ error: 'Ayrılış tarihi varıştan önce olamaz' }, { status: 400 });
+  }
 
   const { data: campaign, error } = await supabase
     .from('campaigns')

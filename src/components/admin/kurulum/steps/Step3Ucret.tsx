@@ -67,17 +67,31 @@ export default function Step3Ucret() {
         Tesisin kişi başı konaklama ücretini girin. Bakiye hesabında çadır bazlı paylaşım için kullanılır.
         Bilmiyorsanız 0 bırakabilirsiniz; sonra düzenleyebilirsiniz.
       </p>
-      <label className="flex items-center gap-2 text-sm font-medium text-forest-800">
-        <input
-          type="checkbox"
-          checked={fees.accommodation_use_age_pricing}
-          onChange={(e) =>
-            setFees({ ...fees, accommodation_use_age_pricing: e.target.checked })
-          }
-          className="rounded border-forest-300"
-        />
-        Yaşa göre farklı ücret (yetişkin / çocuk)
-      </label>
+      <fieldset>
+        <legend className="mb-2 text-sm font-semibold text-forest-900">Fiyatlandırma</legend>
+        <div className="flex flex-col gap-2 sm:flex-row sm:gap-3">
+          <label className="flex min-h-[44px] flex-1 cursor-pointer items-center gap-2 rounded-xl border border-forest-200 bg-white px-3 py-2.5 text-sm has-[:checked]:border-forest-600 has-[:checked]:bg-forest-50">
+            <input
+              type="radio"
+              name="accommodation_pricing"
+              checked={!fees.accommodation_use_age_pricing}
+              onChange={() => setFees({ ...fees, accommodation_use_age_pricing: false })}
+              className="text-forest-700"
+            />
+            Herkes aynı ücret
+          </label>
+          <label className="flex min-h-[44px] flex-1 cursor-pointer items-center gap-2 rounded-xl border border-forest-200 bg-white px-3 py-2.5 text-sm has-[:checked]:border-forest-600 has-[:checked]:bg-forest-50">
+            <input
+              type="radio"
+              name="accommodation_pricing"
+              checked={fees.accommodation_use_age_pricing}
+              onChange={() => setFees({ ...fees, accommodation_use_age_pricing: true })}
+              className="text-forest-700"
+            />
+            Yaşa göre yetişkin / çocuk
+          </label>
+        </div>
+      </fieldset>
       <AuthField
         label={fees.accommodation_use_age_pricing ? 'Yetişkin kişi başı (₺)' : 'Kişi başı ücret (₺)'}
         type="number"

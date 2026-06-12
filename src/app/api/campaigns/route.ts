@@ -25,6 +25,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Eksik alanlar var (kamp, admin adı, çadır adı, kullanıcı adı, şifre)' }, { status: 400 });
     }
 
+    if (end_date < start_date) {
+      return NextResponse.json({ error: 'Ayrılış tarihi varıştan önce olamaz' }, { status: 400 });
+    }
+
     const supabase = createServerClient();
     const password_hash = await hashPassword(admin_password);
 
