@@ -51,7 +51,11 @@ export async function POST(request: NextRequest) {
 
   const { data, error } = await supabase
     .from('tents')
-    .insert({ campaign_id: session.user.campaign_id, name })
+    .insert({
+      campaign_id: session.user.campaign_id,
+      name,
+      max_capacity: limits.max_users_per_tent,
+    })
     .select()
     .single();
 

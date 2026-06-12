@@ -1,12 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { copyLoginInfo } from '@/components/admin/TentsManager';
 import AuthAlert from '@/components/auth/AuthAlert';
 import AuthButton from '@/components/auth/AuthButton';
 import AuthField from '@/components/auth/AuthField';
 import TentUpgradeModal from '@/components/admin/TentUpgradeModal';
-import type { CampaignLimits } from '@/lib/campaign-limits';
+import { tentCapacity, type CampaignLimits } from '@/lib/campaign-limits';
 import type { SafeUser, Tent } from '@/types';
 
 interface TentDetailModalProps {
@@ -33,11 +33,44 @@ export default function TentDetailModal({
     name: '', age: '30', username: '', password: '',
   });
   const [error, setError] = useState('');
+  const [capacityMsg, setCapacityMsg] = useState('');
   const [upgradeOpen, setUpgradeOpen] = useState(false);
+  const [savingCapacity, setSavingCapacity] = useState(false);
 
-  const maxPerTent = limits?.max_users_per_tent ?? 4;
+  const planMax = limits?.max_users_per_tent ?? 4;
+  const maxPerTent = limits
+    ? tentCapacity(tent, limits.plan_tier)
+    : tent.max_capacity ?? planMax;
+  const [capacityInput, setCapacityInput] = useState(String(maxPerTent));
+
+  useEffect(() => {
+    setCapacityInput(String(maxPerTent));
+  }, [tent.id, maxPerTent]);
+
   const tentFull = tentUsers.length >= maxPerTent;
   const canAddCampaignUser = limits?.can_add_user !== false;
+  const capacityDirty = Number(capacityInput) !== maxPerTent;
+
+  async function saveCapacity() {
+    setSavingCapacity(true);
+    setError('');
+    setCapacityMsg('');
+
+    const res = await fetch(`/api/tents/${tent.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ max_capacity: Number(capacityInput) }),
+    });
+    const data = await res.json();
+    setSavingCapacity(false);
+
+    if (!res.ok) {
+      setError(data.error || 'Kapasite kaydedilemedi');
+      return;
+    }
+    setCapacityMsg('Kapasite güncellendi.');
+    onRefresh();
+  }
 
   async function addUser(e: React.FormEvent) {
     e.preventDefault();
@@ -112,6 +145,46 @@ export default function TentDetailModal({
                 <AuthAlert>{error}</AuthAlert>
               </div>
             )}
+            {capacityMsg && (
+              <div className="mb-4">
+                <AuthAlert variant="success">{capacityMsg}</AuthAlert>
+              </div>
+            )}
+
+            <div className="mb-5 rounded-xl border border-forest-100 bg-forest-50/60 p-4">
+              <p className="text-sm font-semibold text-forest-900">Çadır kapasitesi</p>
+              <p className="mt-0.5 text-xs text-forest-500">
+                Bu çadırda en fazla kaç kişi olabileceğini belirleyin
+                {limits?.plan_tier === 'trial' && ` (denemede en fazla ${planMax})`}.
+              </p>
+              <div className="mt-3 flex flex-wrap items-end gap-2">
+                <div className="w-28">
+                  <AuthField
+                    label="Kişi sayısı"
+                    type="number"
+                    min={Math.max(1, tentUsers.length)}
+                    max={planMax}
+                    value={capacityInput}
+                    onChange={(e) => setCapacityInput(e.target.value)}
+                  />
+                </div>
+                <AuthButton
+                  type="button"
+                  variant="secondary"
+                  loading={savingCapacity}
+                  disabled={!capacityDirty}
+                  onClick={saveCapacity}
+                  className="min-h-[48px] shrink-0"
+                >
+                  Kaydet
+                </AuthButton>
+              </div>
+              {tentUsers.length > 0 && (
+                <p className="mt-2 text-xs text-forest-500">
+                  Şu an {tentUsers.length} kişi var — kapasite bundan az olamaz.
+                </p>
+              )}
+            </div>
 
             <ul className="mb-6 space-y-2">
               {tentUsers.length === 0 && (

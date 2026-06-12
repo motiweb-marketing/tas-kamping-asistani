@@ -9,7 +9,7 @@ import { markCredentialsShared } from '@/components/admin/SetupChecklist';
 import AuthAlert from '@/components/auth/AuthAlert';
 import AuthButton from '@/components/auth/AuthButton';
 import AuthField from '@/components/auth/AuthField';
-import type { CampaignLimits } from '@/lib/campaign-limits';
+import { tentCapacity, type CampaignLimits } from '@/lib/campaign-limits';
 import { SITE } from '@/lib/site-config';
 import type { SafeUser, Tent } from '@/types';
 
@@ -113,7 +113,9 @@ export default function TentsManager({
     else load();
   }
 
-  const maxPerTent = limits?.max_users_per_tent ?? 4;
+  function capacityFor(tent: Tent): number {
+    return limits ? tentCapacity(tent, limits.plan_tier) : tent.max_capacity ?? 4;
+  }
 
   return (
     <div className="space-y-6">
@@ -136,7 +138,8 @@ export default function TentsManager({
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
         {tents.map((tent) => {
           const count = usersInTent(tent.id).length;
-          const full = count >= maxPerTent;
+          const cap = capacityFor(tent);
+          const full = count >= cap;
           return (
             <button
               key={tent.id}
@@ -149,7 +152,7 @@ export default function TentsManager({
               </span>
               <span className="mt-2 line-clamp-2 text-sm font-bold text-forest-950">{tent.name}</span>
               <span className="mt-1 text-xs text-forest-500">
-                {count}/{maxPerTent} kişi
+                {count}/{cap} kişi
                 {full && <span className="text-amber-700"> · dolu</span>}
               </span>
               <span className="mt-2 text-[10px] font-medium text-forest-400 opacity-0 transition-opacity group-hover:opacity-100">

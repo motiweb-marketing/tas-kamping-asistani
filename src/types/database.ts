@@ -40,6 +40,7 @@ export interface Tent {
   id: string;
   campaign_id: string;
   name: string;
+  max_capacity: number;
   created_at: string;
 }
 

@@ -4,6 +4,7 @@ import {
   countUsersInTent,
   getCampaignLimits,
   limitErrorMessage,
+  tentCapacity,
   upgradeHint,
 } from '@/lib/campaign-limits';
 import { formatPersonName } from '@/lib/format';
@@ -56,10 +57,18 @@ export async function POST(request: NextRequest) {
   }
 
   if (tent_id) {
+    const { data: tent } = await supabase
+      .from('tents')
+      .select('max_capacity')
+      .eq('id', tent_id)
+      .eq('campaign_id', session.user.campaign_id)
+      .single();
+
+    const cap = tentCapacity(tent || {}, limits.plan_tier);
     const inTent = await countUsersInTent(supabase, tent_id);
-    if (inTent >= limits.max_users_per_tent) {
+    if (inTent >= cap) {
       return NextResponse.json(
-        { error: limitErrorMessage('tent_full', limits), limits },
+        { error: limitErrorMessage('tent_full', limits, cap), limits },
         { status: 403 }
       );
     }

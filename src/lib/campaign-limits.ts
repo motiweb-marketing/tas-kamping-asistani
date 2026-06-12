@@ -18,12 +18,26 @@ export function maxUsersPerTent(plan: PlanTier): number {
   return plan === 'paid' ? 20 : 4;
 }
 
-export function limitErrorMessage(kind: 'tent' | 'user' | 'tent_full', limits: CampaignLimits): string {
+export function tentCapacity(
+  tent: { max_capacity?: number | null },
+  plan: PlanTier
+): number {
+  const cap = tent.max_capacity;
+  if (cap != null && cap >= 1) return cap;
+  return maxUsersPerTent(plan);
+}
+
+export function limitErrorMessage(
+  kind: 'tent' | 'user' | 'tent_full',
+  limits: CampaignLimits,
+  tentCapacityValue?: number
+): string {
   if (kind === 'tent') {
     return `Deneme sürümünde en fazla ${limits.max_tents} çadır ekleyebilirsiniz. Daha fazlası için Pro sürüme geçin.`;
   }
   if (kind === 'tent_full') {
-    return `Bu çadırda en fazla ${limits.max_users_per_tent} kişi olabilir.`;
+    const cap = tentCapacityValue ?? limits.max_users_per_tent;
+    return `Bu çadırda en fazla ${cap} kişi olabilir.`;
   }
   return `Deneme sürümünde en fazla ${limits.max_users} kişi ekleyebilirsiniz. Daha fazlası için Pro sürüme geçin.`;
 }

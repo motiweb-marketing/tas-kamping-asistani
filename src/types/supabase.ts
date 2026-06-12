@@ -43,12 +43,14 @@ export type Database = {
           id?: string;
           campaign_id: string;
           name: string;
+          max_capacity?: number;
           created_at?: string;
         };
         Update: {
           id?: string;
           campaign_id?: string;
           name?: string;
+          max_capacity?: number;
           created_at?: string;
         };
         Relationships: [];
