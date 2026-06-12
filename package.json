@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "next lint",
     "db:seed": "npx tsx scripts/reset-and-seed.ts",
-    "db:migrate": "npx tsx scripts/apply-migrations.ts"
+    "db:migrate": "npx tsx scripts/apply-migrations.ts",
+    "db:tent-capacity": "npx tsx scripts/apply-tent-capacity.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.49.1",

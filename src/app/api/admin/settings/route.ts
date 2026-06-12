@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { maskApiKey, isApiKeyConfigured } from '@/lib/api-key';
+import { isPlatformAiAvailable } from '@/lib/platform-auth';
+import { openRouterKeySource } from '@/lib/resolve-openrouter-key';
 import { getSession } from '@/lib/session';
 import { createServerClient } from '@/lib/supabase/server';
 
@@ -12,7 +14,7 @@ export async function GET() {
   const supabase = createServerClient();
   const { data, error } = await supabase
     .from('campaigns')
-    .select('openrouter_api_key')
+    .select('openrouter_api_key, use_platform_ai')
     .eq('id', session.user.campaign_id)
     .single();
 
@@ -21,10 +23,15 @@ export async function GET() {
   }
 
   const key = data?.openrouter_api_key ?? null;
+  const source = openRouterKeySource(data);
+  const configured = source === 'platform' || isApiKeyConfigured(key);
 
   return NextResponse.json({
-    configured: isApiKeyConfigured(key),
-    masked_key: maskApiKey(key),
+    configured,
+    masked_key: source === 'platform' ? 'Platform AI (satıcı)' : maskApiKey(key),
+    ai_source: source,
+    use_platform_ai: !!data?.use_platform_ai,
+    platform_ai_available: isPlatformAiAvailable(),
   });
 }
 

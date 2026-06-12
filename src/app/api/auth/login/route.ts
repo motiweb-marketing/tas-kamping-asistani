@@ -50,7 +50,13 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Şifre hatalı' }, { status: 401 });
       }
 
+      await supabase
+        .from('users')
+        .update({ last_login_at: new Date().toISOString() })
+        .eq('id', user.id);
+
       const session = await getSession();
+      session.platformAdmin = false;
       session.user = toSessionUser(user);
       session.isLoggedIn = true;
       await session.save();
@@ -95,7 +101,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Şifre hatalı' }, { status: 401 });
     }
 
+    await supabase
+      .from('users')
+      .update({ last_login_at: new Date().toISOString() })
+      .eq('id', user.id);
+
     const session = await getSession();
+    session.platformAdmin = false;
     session.user = toSessionUser(user);
     session.isLoggedIn = true;
     await session.save();

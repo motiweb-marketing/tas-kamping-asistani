@@ -4,6 +4,8 @@ import type { SessionUser } from '@/types';
 
 export interface SessionData {
   user?: SessionUser;
+  /** Kamp Asistanı platform sahibi (satış / operasyon) oturumu */
+  platformAdmin?: boolean;
   isLoggedIn: boolean;
 }
 

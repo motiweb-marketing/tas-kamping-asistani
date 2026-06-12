@@ -53,13 +53,27 @@ foreach ($name in $required) {
 
 Write-Host "Vercel environment variables yukleniyor..." -ForegroundColor Cyan
 
-foreach ($name in $required) {
+$optional = @(
+    "PLATFORM_ADMIN_USERNAME",
+    "PLATFORM_ADMIN_PASSWORD",
+    "PLATFORM_OPENROUTER_API_KEY"
+)
+
+function Push-VercelEnv($name) {
     $value = $vars[$name]
     Write-Host "  -> $name" -ForegroundColor Gray
-
-    # Mevcut varsa atla (vercel env add tekrar ekler)
     $value | npx vercel env add $name production --token $env:VERCEL_TOKEN @scopeArgs --force 2>&1 | ForEach-Object {
         if ($_ -notmatch "already exists") { Write-Host $_ }
+    }
+}
+
+foreach ($name in $required) {
+    Push-VercelEnv $name
+}
+
+foreach ($name in $optional) {
+    if ($vars[$name]) {
+        Push-VercelEnv $name
     }
 }
 

@@ -30,6 +30,10 @@ export interface Campaign {
   plan_tier: 'trial' | 'paid';
   max_tents: number;
   max_users: number;
+  use_platform_ai?: boolean;
+  platform_notes?: string | null;
+  owner_contact_name?: string | null;
+  owner_contact_email?: string | null;
   created_at: string;
 }
 
@@ -53,6 +57,7 @@ export interface User {
   role: UserRole;
   username: string;
   password_hash: string;
+  last_login_at?: string | null;
   created_at: string;
 }
 

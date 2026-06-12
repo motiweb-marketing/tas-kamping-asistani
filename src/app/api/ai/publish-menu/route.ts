@@ -6,6 +6,7 @@ import {
   callOpenRouterMenuPublish,
   type RawDayMenuInput,
 } from '@/lib/openrouter';
+import { resolveOpenRouterKeyFromRow } from '@/lib/resolve-openrouter-key';
 import { getSession } from '@/lib/session';
 import { createServerClient } from '@/lib/supabase/server';
 
@@ -21,18 +22,22 @@ export async function POST() {
   const [campaignRes, menusRes] = await Promise.all([
     supabase
       .from('campaigns')
-      .select('openrouter_api_key, menu_ai_prompt, start_date, end_date')
+      .select('openrouter_api_key, use_platform_ai, menu_ai_prompt, start_date, end_date')
       .eq('id', campaignId)
       .single(),
     supabase.from('menus').select('id, day, meal_type, description').eq('campaign_id', campaignId),
   ]);
 
   const campaign = campaignRes.data;
-  const apiKey = campaign?.openrouter_api_key;
+  const apiKey = resolveOpenRouterKeyFromRow(campaign);
 
-  if (!apiKey?.trim()) {
+  if (!apiKey) {
     return NextResponse.json(
-      { error: 'OpenRouter API anahtarı tanımlı değil. Admin → Ayarlar sayfasından girin.' },
+      {
+        error: campaign?.use_platform_ai
+          ? 'Platform AI paketi henüz aktif değil. Satıcıyla iletişime geçin.'
+          : 'OpenRouter API anahtarı tanımlı değil. Admin → Ayarlar sayfasından girin.',
+      },
       { status: 400 }
     );
   }
