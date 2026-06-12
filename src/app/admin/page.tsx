@@ -1,16 +1,22 @@
 import Link from 'next/link';
 import PlanBadge from '@/components/admin/PlanBadge';
-import SetupChecklist from '@/components/admin/SetupChecklist';
 import TrialUpgradeCard from '@/components/admin/TrialUpgradeCard';
+import { fetchSetupProgress } from '@/lib/admin-setup-server';
 import { getCampaignLimits } from '@/lib/campaign-limits';
 import { getSession } from '@/lib/session';
 import { createServerClient } from '@/lib/supabase/server';
 import type { Campaign } from '@/types';
+import { redirect } from 'next/navigation';
 
 export default async function AdminPage() {
   const session = await getSession();
   const supabase = createServerClient();
   const campaignId = session.user!.campaign_id;
+
+  const { allRequiredDone } = await fetchSetupProgress(campaignId);
+  if (!allRequiredDone) {
+    redirect('/admin/kurulum');
+  }
 
   const { data: campaignData } = (await supabase
     .from('campaigns')
@@ -30,15 +36,16 @@ export default async function AdminPage() {
   const stats = [
     { label: 'Çadır', value: tents.count || 0 },
     { label: 'Kişi', value: users.count || 0 },
-    { label: 'Öğün Kaydı', value: menus.count || 0 },
+    { label: 'Öğün kaydı', value: menus.count || 0 },
     { label: 'Malzeme', value: items.count || 0 },
   ];
 
   const quickLinks = [
-    { href: '/summary', label: 'Kamp Özeti — Kim ne getiriyor?' },
-    { href: '/admin/checklists', label: 'Önerilen Listeler (kişisel & çadır)' },
-    { href: '/admin/items-review', label: 'Ortak Alışveriş Review (AI)' },
-    { href: '/admin/camp-settings', label: 'Kamp Ayarları & Menü' },
+    { href: '/admin/kurulum', label: 'Kurulum sihirbazı' },
+    { href: '/summary', label: 'Kamp özeti — kim ne getiriyor?' },
+    { href: '/admin/hazir-listeler', label: 'Hazır listeler (kişisel & çadır)' },
+    { href: '/admin/liste', label: 'Ortak alışveriş listesi' },
+    { href: '/admin/paylas', label: 'Giriş bilgisini paylaş' },
   ];
 
   const planTier = campaignData?.plan_tier || limits.plan_tier;
@@ -47,44 +54,35 @@ export default async function AdminPage() {
     <div className="flex flex-col gap-6">
       <div>
         <div className="flex flex-wrap items-center gap-2">
-          <h2 className="text-xl font-bold">{campaignData?.name}</h2>
+          <h1 className="font-display text-2xl font-bold text-forest-950">{campaignData?.name}</h1>
           <PlanBadge planTier={planTier} />
         </div>
-        <p className="text-lg text-gray-600">{campaignData?.location}</p>
-        <p className="text-base text-gray-500">
+        <p className="text-base text-forest-600">{campaignData?.location}</p>
+        <p className="text-sm text-forest-500">
           {campaignData?.start_date} — {campaignData?.end_date}
         </p>
       </div>
 
       <TrialUpgradeCard limits={limits} />
 
-      <SetupChecklist
-        tentCount={tents.count || 0}
-        userCount={users.count || 0}
-        hasDates={!!(campaignData?.start_date && campaignData?.end_date)}
-        hasApiKey={!!campaignData?.openrouter_api_key}
-        menuCount={menus.count || 0}
-        itemCount={items.count || 0}
-      />
-
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         {stats.map((s) => (
           <div
             key={s.label}
-            className="rounded-xl border-2 border-emerald-200 bg-emerald-50 p-4 text-center"
+            className="rounded-xl border border-forest-100 bg-white p-4 text-center shadow-sm"
           >
-            <p className="text-3xl font-bold text-emerald-800">{s.value}</p>
-            <p className="text-lg">{s.label}</p>
+            <p className="text-3xl font-bold text-forest-800">{s.value}</p>
+            <p className="text-sm text-forest-600">{s.label}</p>
           </div>
         ))}
       </div>
 
-      <div className="rounded-xl border-2 border-blue-200 bg-blue-50 p-4">
-        <h3 className="mb-3 font-semibold text-blue-900">Hızlı Erişim</h3>
+      <div className="rounded-xl border border-forest-100 bg-white p-4 shadow-sm">
+        <h3 className="mb-3 font-semibold text-forest-900">Hızlı erişim</h3>
         <ul className="flex flex-col gap-2">
           {quickLinks.map((l) => (
             <li key={l.href}>
-              <Link href={l.href} className="text-base font-medium text-blue-800 underline">
+              <Link href={l.href} className="text-sm font-medium text-forest-800 underline">
                 {l.label}
               </Link>
             </li>
@@ -92,9 +90,8 @@ export default async function AdminPage() {
         </ul>
       </div>
 
-      <p className="text-sm text-gray-600">
-        Standart malzemeler (tabak, çatal vb.) kişi sayısına göre otomatik güncellenir.
-        Kişi eklediğinizde veya çıkardığınızda adetler yeniden hesaplanır.
+      <p className="text-sm text-forest-500">
+        Sol menüden kamp bilgilerini, çadırları, menüyü ve listeleri istediğiniz zaman düzenleyebilirsiniz.
       </p>
     </div>
   );

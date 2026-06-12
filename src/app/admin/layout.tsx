@@ -1,4 +1,4 @@
-import AdminHeader from '@/components/layout/AdminHeader';
+import AdminSidebar from '@/components/admin/AdminSidebar';
 import { getSession } from '@/lib/session';
 import { redirect } from 'next/navigation';
 
@@ -14,9 +14,11 @@ export default async function AdminLayout({
   if (session.user?.role !== 'admin') redirect('/items');
 
   return (
-    <div className="mx-auto min-h-screen max-w-lg md:max-w-3xl lg:max-w-5xl">
-      <AdminHeader />
-      <main className="p-4">{children}</main>
+    <div className="flex min-h-screen bg-sand-50">
+      <AdminSidebar />
+      <div className="flex min-w-0 flex-1 flex-col">
+        <main className="mx-auto w-full max-w-3xl flex-1 p-4 lg:max-w-4xl lg:p-6">{children}</main>
+      </div>
     </div>
   );
 }
