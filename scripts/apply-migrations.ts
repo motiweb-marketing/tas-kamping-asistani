@@ -81,6 +81,7 @@ async function main() {
     '010_campaign_plan.sql',
     '011_tent_capacity.sql',
     '012_platform_admin.sql',
+    '013_platform_settings.sql',
   ];
 
   for (const file of files) {

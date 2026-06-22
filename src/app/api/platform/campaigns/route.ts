@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { listPlatformCampaigns } from '@/lib/platform-campaigns';
-import { isPlatformAiAvailable, requirePlatformAdmin } from '@/lib/platform-auth';
+import { isPlatformAiConfigured } from '@/lib/platform-settings';
+import { requirePlatformAdmin } from '@/lib/platform-auth';
 import { createServerClient } from '@/lib/supabase/server';
 
 export async function GET() {
@@ -17,6 +18,8 @@ export async function GET() {
   const totalUsers = campaigns.reduce((s, c) => s + c.users_count, 0);
   const platformAi = campaigns.filter((c) => c.use_platform_ai).length;
 
+  const platformAiAvailable = await isPlatformAiConfigured(supabase);
+
   return NextResponse.json({
     campaigns,
     stats: {
@@ -25,7 +28,7 @@ export async function GET() {
       paid,
       total_users: totalUsers,
       platform_ai: platformAi,
-      platform_ai_available: isPlatformAiAvailable(),
+      platform_ai_available: platformAiAvailable,
     },
   });
 }

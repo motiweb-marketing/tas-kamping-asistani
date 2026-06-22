@@ -28,6 +28,16 @@ export default function PlatformShell({
         </div>
         <nav className="flex flex-wrap items-center gap-2">
           <Link
+            href="/platform/ayarlar"
+            className={`rounded-lg px-3 py-2 text-sm font-medium ${
+              pathname === '/platform/ayarlar'
+                ? 'bg-indigo-600 text-white'
+                : 'text-slate-300 hover:bg-slate-800'
+            }`}
+          >
+            AI ayarları
+          </Link>
+          <Link
             href="/platform"
             className={`rounded-lg px-3 py-2 text-sm font-medium ${
               pathname === '/platform' ? 'bg-indigo-600 text-white' : 'text-slate-300 hover:bg-slate-800'

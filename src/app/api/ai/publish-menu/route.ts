@@ -6,6 +6,7 @@ import {
   callOpenRouterMenuPublish,
   type RawDayMenuInput,
 } from '@/lib/openrouter';
+import { getPlatformOpenRouterKey } from '@/lib/platform-settings';
 import { resolveOpenRouterKeyFromRow } from '@/lib/resolve-openrouter-key';
 import { getSession } from '@/lib/session';
 import { createServerClient } from '@/lib/supabase/server';
@@ -29,7 +30,10 @@ export async function POST() {
   ]);
 
   const campaign = campaignRes.data;
-  const apiKey = resolveOpenRouterKeyFromRow(campaign);
+  const apiKey = resolveOpenRouterKeyFromRow(
+    campaign,
+    await getPlatformOpenRouterKey(supabase)
+  );
 
   if (!apiKey) {
     const isPro = campaign?.plan_tier === 'paid';

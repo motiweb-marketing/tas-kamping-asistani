@@ -96,7 +96,17 @@ export default function PlatformDashboardPage() {
       {stats && (
         <p className="mb-6 text-sm text-slate-400">
           Pro kamplarda AI liste ve menü özelliği otomatik dahildir.
-          {stats.platform_ai_available ? '' : ' · PLATFORM_OPENROUTER_API_KEY eksik — AI çalışmaz'}
+          {stats.platform_ai_available ? (
+            ''
+          ) : (
+            <>
+              {' '}
+              ·{' '}
+              <Link href="/platform/ayarlar" className="font-semibold text-indigo-400 underline">
+                OpenRouter anahtarını girin
+              </Link>
+            </>
+          )}
         </p>
       )}
 

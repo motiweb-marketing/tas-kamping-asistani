@@ -4,6 +4,7 @@ import { dayMenuToFlat, rowsToDayMap } from '@/lib/menu-storage';
 import { getSession } from '@/lib/session';
 import { createServerClient } from '@/lib/supabase/server';
 import { buildSystemPrompt, callOpenRouter } from '@/lib/openrouter';
+import { getPlatformOpenRouterKey } from '@/lib/platform-settings';
 import { resolveOpenRouterKeyFromRow } from '@/lib/resolve-openrouter-key';
 
 export async function POST() {
@@ -22,7 +23,10 @@ export async function POST() {
     supabase.from('menus').select('id, day, meal_type, description').eq('campaign_id', campaignId),
   ]);
 
-  const apiKey = resolveOpenRouterKeyFromRow(campaignRes.data);
+  const apiKey = resolveOpenRouterKeyFromRow(
+    campaignRes.data,
+    await getPlatformOpenRouterKey(supabase)
+  );
   if (!apiKey) {
     const isPro = campaignRes.data?.plan_tier === 'paid';
     return NextResponse.json(
