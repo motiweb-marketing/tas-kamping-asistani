@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
 import PlatformShell from '@/components/platform/PlatformShell';
+import PlatformUserEditModal from '@/components/platform/PlatformUserEditModal';
 import type { SafeUser, Tent } from '@/types';
 
 interface CampaignDetail {
@@ -18,6 +19,7 @@ interface CampaignDetail {
   owner_contact_name: string | null;
   owner_contact_email: string | null;
   has_own_ai_key: boolean;
+  admin_id: string | null;
   start_date: string;
   end_date: string;
 }
@@ -41,6 +43,7 @@ export default function PlatformCampaignDetailPage() {
   const [saving, setSaving] = useState(false);
   const [importing, setImporting] = useState(false);
   const [importResult, setImportResult] = useState<string | null>(null);
+  const [editingUser, setEditingUser] = useState<SafeUser | null>(null);
 
   const load = useCallback(async () => {
     const res = await fetch(`/api/platform/campaigns/${id}`);
@@ -303,6 +306,7 @@ export default function PlatformCampaignDetailPage() {
                 <th className="px-4 py-3">Ad</th>
                 <th className="px-4 py-3">Kullanıcı adı</th>
                 <th className="px-4 py-3">Çadır</th>
+                <th className="px-4 py-3">Rol</th>
                 <th className="px-4 py-3">Son giriş</th>
                 <th className="px-4 py-3" />
               </tr>
@@ -312,21 +316,37 @@ export default function PlatformCampaignDetailPage() {
                 <tr key={u.id}>
                   <td className="px-4 py-3 text-white">
                     {u.name}
-                    {u.role === 'admin' && (
-                      <span className="ml-2 rounded bg-slate-700 px-1.5 py-0.5 text-[10px]">Admin</span>
-                    )}
                   </td>
                   <td className="px-4 py-3 text-slate-300">@{u.username}</td>
                   <td className="px-4 py-3 text-slate-400">{tentName(u.tent_id)}</td>
+                  <td className="px-4 py-3">
+                    {u.role === 'admin' ? (
+                      <span className="rounded bg-indigo-900/60 px-2 py-0.5 text-xs text-indigo-200">
+                        Admin
+                        {campaign.admin_id === u.id && ' · Ana'}
+                      </span>
+                    ) : (
+                      <span className="text-xs text-slate-500">Katılımcı</span>
+                    )}
+                  </td>
                   <td className="px-4 py-3 text-slate-500">{formatDate(u.last_login_at)}</td>
                   <td className="px-4 py-3 text-right">
-                    <button
-                      type="button"
-                      onClick={() => deleteUser(u.id, u.name)}
-                      className="text-sm font-semibold text-red-400 hover:text-red-300"
-                    >
-                      Sil
-                    </button>
+                    <div className="flex justify-end gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setEditingUser(u)}
+                        className="text-sm font-semibold text-indigo-400 hover:text-indigo-300"
+                      >
+                        Düzenle
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => deleteUser(u.id, u.name)}
+                        className="text-sm font-semibold text-red-400 hover:text-red-300"
+                      >
+                        Sil
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -334,6 +354,20 @@ export default function PlatformCampaignDetailPage() {
           </table>
         </div>
       </section>
+
+      {editingUser && (
+        <PlatformUserEditModal
+          user={editingUser}
+          tents={tents}
+          campaignAdminId={campaign.admin_id}
+          open={Boolean(editingUser)}
+          onClose={() => setEditingUser(null)}
+          onSaved={() => {
+            setMessage(`${editingUser.name} güncellendi.`);
+            load();
+          }}
+        />
+      )}
 
       <section className="mt-10 border-t border-slate-800 pt-8">
         <button

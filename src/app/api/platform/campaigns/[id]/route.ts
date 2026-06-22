@@ -15,7 +15,7 @@ export async function GET(
   const { data: campaign, error } = await supabase
     .from('campaigns')
     .select(
-      'id, name, location, plan_tier, max_tents, max_users, use_platform_ai, platform_notes, owner_contact_name, owner_contact_email, start_date, end_date, created_at, openrouter_api_key'
+      'id, name, location, plan_tier, max_tents, max_users, use_platform_ai, platform_notes, owner_contact_name, owner_contact_email, start_date, end_date, created_at, openrouter_api_key, admin_id'
     )
     .eq('id', params.id)
     .single();
