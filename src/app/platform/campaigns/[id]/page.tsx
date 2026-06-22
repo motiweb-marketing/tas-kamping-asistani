@@ -4,7 +4,6 @@ import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
 import PlatformShell from '@/components/platform/PlatformShell';
-import { CSV_TEMPLATE } from '@/lib/csv-user-import';
 import type { SafeUser, Tent } from '@/types';
 
 interface CampaignDetail {
@@ -119,7 +118,7 @@ export default function PlatformCampaignDetailPage() {
     router.push('/platform');
   }
 
-  async function handleCsvImport(e: React.ChangeEvent<HTMLInputElement>) {
+  async function handleFileImport(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
     setImporting(true);
@@ -149,12 +148,17 @@ export default function PlatformCampaignDetailPage() {
     load();
   }
 
-  function downloadTemplate() {
-    const blob = new Blob([CSV_TEMPLATE], { type: 'text/csv;charset=utf-8' });
+  async function downloadTemplate() {
+    const res = await fetch('/api/platform/import-template');
+    if (!res.ok) {
+      setError('Örnek dosya indirilemedi');
+      return;
+    }
+    const blob = await res.blob();
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'kamp-katilimcilar-ornek.csv';
+    a.download = 'kamp-katilimcilar-ornek.xlsx';
     a.click();
     URL.revokeObjectURL(url);
   }
@@ -261,12 +265,12 @@ export default function PlatformCampaignDetailPage() {
       </div>
 
       <section className="mt-8 rounded-xl border border-slate-800 bg-slate-900/60 p-5">
-        <h2 className="font-semibold text-white">Toplu kişi yükleme (CSV)</h2>
+        <h2 className="font-semibold text-white">Toplu kişi yükleme (Excel)</h2>
         <p className="mt-1 text-sm text-slate-400">
-          Manuel ekleme istemeyen müşteriler için: Excel&apos;den CSV kaydedip yükleyin.
+          Örnek Excel dosyasını indirip doldurun; aynı dosyayı doğrudan yükleyebilirsiniz.
         </p>
-        <p className="mt-2 font-mono text-xs text-slate-500">
-          Sütunlar: ad_soyad, yas, kullanici_adi, sifre, cadir_adi
+        <p className="mt-2 text-xs text-slate-500">
+          Sütunlar: Ad Soyad, Yaş, Kullanıcı Adı, Şifre, Çadır Adı
         </p>
         <div className="mt-4 flex flex-wrap gap-3">
           <button
@@ -274,11 +278,17 @@ export default function PlatformCampaignDetailPage() {
             onClick={downloadTemplate}
             className="rounded-lg border border-slate-600 px-4 py-2 text-sm font-medium text-slate-300"
           >
-            Örnek CSV indir
+            Örnek Excel indir
           </button>
           <label className="cursor-pointer rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white">
-            {importing ? 'Yükleniyor...' : 'CSV yükle'}
-            <input type="file" accept=".csv,text/csv" className="hidden" onChange={handleCsvImport} disabled={importing} />
+            {importing ? 'Yükleniyor...' : 'Dosya yükle'}
+            <input
+              type="file"
+              accept=".xlsx,.xls,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,text/csv"
+              className="hidden"
+              onChange={handleFileImport}
+              disabled={importing}
+            />
           </label>
         </div>
         {importResult && <p className="mt-3 text-sm text-emerald-400">{importResult}</p>}

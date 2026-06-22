@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { hashPassword } from '@/lib/auth';
 import { getCampaignLimits } from '@/lib/campaign-limits';
-import { parseUsersCsv } from '@/lib/csv-user-import';
+import { parseUsersFile } from '@/lib/user-import';
 import { formatPersonName, formatTitleCase } from '@/lib/format';
 import { requirePlatformAdmin } from '@/lib/platform-auth';
 import { syncStandardSharedItems } from '@/lib/sync-standard-items';
@@ -19,11 +19,11 @@ export async function POST(
   const formData = await request.formData();
   const file = formData.get('file');
   if (!(file instanceof File)) {
-    return NextResponse.json({ error: 'CSV dosyası gerekli' }, { status: 400 });
+    return NextResponse.json({ error: 'Excel veya CSV dosyası gerekli' }, { status: 400 });
   }
 
-  const text = await file.text();
-  const { rows, errors: parseErrors } = parseUsersCsv(text);
+  const buffer = await file.arrayBuffer();
+  const { rows, errors: parseErrors } = parseUsersFile(buffer, file.name);
   if (parseErrors.length && !rows.length) {
     return NextResponse.json({ error: parseErrors.join(' ') }, { status: 400 });
   }
