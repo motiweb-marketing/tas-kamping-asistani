@@ -15,9 +15,9 @@ const config: Config = {
       },
       colors: {
         kamp: {
-          orange: '#FEF3C7',
+          orange: '#FFFBEB',
           'orange-border': '#F59E0B',
-          green: '#D1FAE5',
+          green: '#ECFDF5',
           'green-border': '#10B981',
         },
         forest: {
