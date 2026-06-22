@@ -26,8 +26,9 @@ export default function Step5ListeGuide() {
       <div className="rounded-xl border border-forest-100 bg-forest-50 p-4">
         <p className="text-sm font-semibold text-forest-900">Önerilen sıra</p>
         <ol className="mt-2 list-decimal space-y-2 pl-5 text-sm text-forest-700">
+          <li>Tüm kişileri ve çadırları kaydedin (liste kişi sayısına göre hesaplanır)</li>
           <li>Menüyü tamamlayın (veya önceki adımda atladıysanız sonra dönün)</li>
-          <li>Kamp ihtiyaçlarını AI ile veya elle oluşturun</li>
+          <li>Menü sayfasında AI sihirbazı ile eksiksiz kamp listesi oluşturun</li>
           <li>Kişisel ve çadır listelerini kontrol edin</li>
           <li>Kamp listesini inceleyip yayınlayın</li>
         </ol>
@@ -52,7 +53,7 @@ export default function Step5ListeGuide() {
             Kamp listesini düzenle →
           </AuthButton>
         </Link>
-        <Link href="/admin/items-review">
+        <Link href="/admin/listeler/kamp">
           <AuthButton type="button" variant="secondary" className="w-full sm:w-auto">
             AI listesini incele →
           </AuthButton>

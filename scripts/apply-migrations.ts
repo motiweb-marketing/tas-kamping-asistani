@@ -82,6 +82,7 @@ async function main() {
     '011_tent_capacity.sql',
     '012_platform_admin.sql',
     '013_platform_settings.sql',
+    '014_list_generation_scaling.sql',
   ];
 
   for (const file of files) {

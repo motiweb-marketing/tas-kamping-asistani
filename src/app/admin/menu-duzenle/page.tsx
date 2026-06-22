@@ -3,8 +3,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import CampDatesSummary from '@/components/admin/CampDatesSummary';
+import ListGenerationWizard from '@/components/admin/ListGenerationWizard';
 import { useDebouncedFn } from '@/hooks/use-debounced-fn';
 import { SECTION_LABELS } from '@/lib/camp-slots';
+import type { ListGenerationContext } from '@/lib/list-generation-context';
 import type { CampaignSettings } from '@/types';
 
 interface DayCard {
@@ -38,6 +40,12 @@ export default function CampSettingsPage() {
   const [savingPrompt, setSavingPrompt] = useState(false);
   const [publishing, setPublishing] = useState(false);
   const [generating, setGenerating] = useState(false);
+  const [wizardOpen, setWizardOpen] = useState(false);
+  const [listReadiness, setListReadiness] = useState<{
+    ready: boolean;
+    participantCount: number;
+    errors: string[];
+  } | null>(null);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const [savingDay, setSavingDay] = useState<string | null>(null);
@@ -78,6 +86,18 @@ export default function CampSettingsPage() {
   useEffect(() => {
     load();
   }, [load]);
+
+  const loadListReadiness = useCallback(async () => {
+    const res = await fetch('/api/ai/list-readiness');
+    if (res.ok) {
+      const data = await res.json();
+      setListReadiness(data);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadListReadiness();
+  }, [loadListReadiness, days]);
 
   async function saveAiPrompt() {
     setSavingPrompt(true);
@@ -148,18 +168,26 @@ export default function CampSettingsPage() {
     setMessage('Menü AI ile düzenlendi ve katılımcılara yayınlandı.');
   }
 
-  async function generateList() {
+  async function generateList(context: ListGenerationContext) {
     setGenerating(true);
     setMessage('');
     setError('');
-    const res = await fetch('/api/ai/generate-items', { method: 'POST' });
+    const res = await fetch('/api/ai/generate-items', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ context }),
+    });
     const data = await res.json();
     setGenerating(false);
     if (!res.ok) {
       setError(data.error || 'Hata oluştu');
       return;
     }
-    setMessage(`${data.count} kamp ihtiyacı oluşturuldu. Listeler → Kamp ihtiyaçları sayfasından kontrol edip yayınlayın.`);
+    setWizardOpen(false);
+    setMessage(
+      `${data.count} kamp ihtiyacı (${data.headcount} kişi için) oluşturuldu. Listeler → Kamp ihtiyaçları sayfasından kontrol edip yayınlayın.`
+    );
+    loadListReadiness();
   }
 
   const hasMenuContent = days.some(
@@ -332,12 +360,32 @@ export default function CampSettingsPage() {
       )}
 
       <button
-        onClick={generateList}
+        onClick={() => setWizardOpen(true)}
         disabled={generating || !hasMenuContent || !apiSettings?.configured}
         className="min-h-[52px] w-full rounded-xl bg-blue-600 text-base font-semibold text-white disabled:opacity-50 sm:text-lg"
       >
         {generating ? 'AI Listesi Oluşturuluyor...' : 'Alışveriş Listesini Oluştur (AI)'}
       </button>
+
+      {listReadiness && !listReadiness.ready && hasMenuContent && (
+        <p className="text-sm text-amber-800">
+          Liste için önce kişileri ve çadırları tamamlayın.
+          {listReadiness.errors[0] ? ` ${listReadiness.errors[0]}` : ''}
+        </p>
+      )}
+
+      {listReadiness?.ready && (
+        <p className="text-sm text-gray-600">
+          {listReadiness.participantCount} kişi kayıtlı — liste bu sayıya göre hesaplanır.
+        </p>
+      )}
+
+      <ListGenerationWizard
+        open={wizardOpen}
+        onClose={() => setWizardOpen(false)}
+        onGenerate={generateList}
+        generating={generating}
+      />
     </div>
   );
 }

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requirePlatformAdmin } from '@/lib/platform-auth';
-import { syncStandardSharedItems } from '@/lib/sync-standard-items';
+import { syncAllListQuantities } from '@/lib/sync-ai-list-quantities';
 import { createServerClient } from '@/lib/supabase/server';
 
 export async function DELETE(
@@ -46,7 +46,7 @@ export async function DELETE(
   }
 
   try {
-    await syncStandardSharedItems(supabase, user.campaign_id);
+    await syncAllListQuantities(supabase, user.campaign_id);
   } catch {
     /* ignore */
   }

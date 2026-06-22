@@ -34,6 +34,11 @@ export interface Campaign {
   platform_notes?: string | null;
   owner_contact_name?: string | null;
   owner_contact_email?: string | null;
+  list_generation_context?: Record<string, unknown> | null;
+  list_baseline_headcount?: number | null;
+  list_baseline_adults?: number | null;
+  list_baseline_children?: number | null;
+  list_generated_at?: string | null;
   created_at: string;
 }
 
@@ -96,6 +101,10 @@ export interface Item {
   is_extra: boolean;
   is_published: boolean;
   price: number;
+  scales_with_people?: boolean;
+  quantity_amount?: number | null;
+  quantity_unit_text?: string | null;
+  baseline_headcount?: number | null;
   created_at: string;
 }
 

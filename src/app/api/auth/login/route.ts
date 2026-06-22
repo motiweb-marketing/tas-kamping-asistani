@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyPassword, toSessionUser } from '@/lib/auth';
+import { normalizeUsername } from '@/lib/user-validation';
 import { getSession } from '@/lib/session';
 import { createServerClient } from '@/lib/supabase/server';
 
@@ -18,13 +19,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Kullanıcı adı ve şifre gerekli' }, { status: 400 });
     }
 
+    const loginUsername = normalizeUsername(String(username));
+
     const supabase = createServerClient();
 
     if (loginMode === 'tent') {
       const { data: users, error } = await supabase
         .from('users')
         .select('*')
-        .eq('username', username)
+        .eq('username', loginUsername)
         .eq('role', 'user');
 
       if (error || !users?.length) {
@@ -72,7 +75,7 @@ export async function POST(request: NextRequest) {
     const { data: admins, error } = await supabase
       .from('users')
       .select('*')
-      .eq('username', username)
+      .eq('username', loginUsername)
       .eq('role', 'admin');
 
     if (error || !admins?.length) {

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { assertNoDuplicateItem } from '@/lib/item-duplicates';
 import { enrichItemWithClaims, normalizeClaims } from '@/lib/item-claims';
 import { ensureCampaignRecommendations } from '@/lib/recommendations';
-import { syncStandardSharedItems } from '@/lib/sync-standard-items';
+import { syncAllListQuantities } from '@/lib/sync-ai-list-quantities';
 import { getSession } from '@/lib/session';
 import { createServerClient } from '@/lib/supabase/server';
 import type { ItemClaimWithTent, ItemListScope, ItemWithRelations } from '@/types';
@@ -45,7 +45,7 @@ export async function GET(request: NextRequest) {
   try {
     await ensureCampaignRecommendations(supabase, campaignId);
     if (scope === 'shared' || !scope || scope === 'all') {
-      await syncStandardSharedItems(supabase, campaignId);
+      await syncAllListQuantities(supabase, campaignId);
     }
   } catch {
     /* migration pending */

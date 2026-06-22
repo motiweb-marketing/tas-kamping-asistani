@@ -19,6 +19,8 @@ interface TentDetailModalProps {
   onDeleteUser: (id: string) => Promise<void>;
 }
 
+const emptyUserForm = { name: '', age: '30', username: '', password: '' };
+
 export default function TentDetailModal({
   tent,
   users,
@@ -29,10 +31,12 @@ export default function TentDetailModal({
   onDeleteUser,
 }: TentDetailModalProps) {
   const tentUsers = users.filter((u) => u.tent_id === tent.id);
-  const [userForm, setUserForm] = useState({
-    name: '', age: '30', username: '', password: '',
-  });
+  const [userForm, setUserForm] = useState(emptyUserForm);
+  const [editingUser, setEditingUser] = useState<SafeUser | null>(null);
+  const [editForm, setEditForm] = useState({ ...emptyUserForm, password: '' });
+  const [savingEdit, setSavingEdit] = useState(false);
   const [error, setError] = useState('');
+  const [successMsg, setSuccessMsg] = useState('');
   const [capacityMsg, setCapacityMsg] = useState('');
   const [upgradeOpen, setUpgradeOpen] = useState(false);
   const [savingCapacity, setSavingCapacity] = useState(false);
@@ -50,6 +54,23 @@ export default function TentDetailModal({
   const tentFull = tentUsers.length >= maxPerTent;
   const canAddCampaignUser = limits?.can_add_user !== false;
   const capacityDirty = Number(capacityInput) !== maxPerTent;
+
+  function startEdit(user: SafeUser) {
+    setEditingUser(user);
+    setEditForm({
+      name: user.name,
+      age: String(user.age),
+      username: user.username,
+      password: '',
+    });
+    setError('');
+    setSuccessMsg('');
+  }
+
+  function cancelEdit() {
+    setEditingUser(null);
+    setEditForm({ ...emptyUserForm, password: '' });
+  }
 
   async function saveCapacity() {
     setSavingCapacity(true);
@@ -75,6 +96,7 @@ export default function TentDetailModal({
   async function addUser(e: React.FormEvent) {
     e.preventDefault();
     setError('');
+    setSuccessMsg('');
 
     if (!canAddCampaignUser) {
       setUpgradeOpen(true);
@@ -99,7 +121,43 @@ export default function TentDetailModal({
       setError(data.error || 'Kişi eklenemedi');
       return;
     }
-    setUserForm({ name: '', age: '30', username: '', password: '' });
+    setUserForm(emptyUserForm);
+    setSuccessMsg('Kişi eklendi.');
+    onRefresh();
+  }
+
+  async function saveEdit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!editingUser) return;
+
+    setSavingEdit(true);
+    setError('');
+    setSuccessMsg('');
+
+    const body: Record<string, string | number> = {
+      name: editForm.name,
+      age: Number(editForm.age),
+      username: editForm.username,
+    };
+    if (editForm.password.trim()) {
+      body.password = editForm.password;
+    }
+
+    const res = await fetch(`/api/users/${editingUser.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    const data = await res.json();
+    setSavingEdit(false);
+
+    if (!res.ok) {
+      setError(data.error || 'Güncellenemedi');
+      return;
+    }
+
+    setSuccessMsg(`${data.user.name} güncellendi.`);
+    cancelEdit();
     onRefresh();
   }
 
@@ -143,6 +201,11 @@ export default function TentDetailModal({
             {error && (
               <div className="mb-4">
                 <AuthAlert>{error}</AuthAlert>
+              </div>
+            )}
+            {successMsg && (
+              <div className="mb-4">
+                <AuthAlert variant="success">{successMsg}</AuthAlert>
               </div>
             )}
             {capacityMsg && (
@@ -192,50 +255,120 @@ export default function TentDetailModal({
                   Henüz kimse yok — aşağıdan ekleyin
                 </li>
               )}
-              {tentUsers.map((u) => (
-                <li
-                  key={u.id}
-                  className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-forest-100 bg-forest-50/50 px-4 py-3"
-                >
-                  <div>
-                    <p className="text-sm font-semibold text-forest-900">
-                      {u.name}{' '}
-                      <span className="font-normal text-forest-500">@{u.username}</span>
-                      {u.role === 'admin' && (
-                        <span className="ml-1 rounded-full bg-forest-200 px-2 py-0.5 text-[10px]">
-                          Admin
-                        </span>
-                      )}
-                    </p>
-                    <p className="text-xs text-forest-500">Yaş: {u.age}</p>
-                  </div>
-                  <div className="flex gap-2">
-                    {showShareButtons && (
+              {tentUsers.map((u) =>
+                editingUser?.id === u.id ? (
+                  <li
+                    key={u.id}
+                    className="rounded-xl border-2 border-forest-300 bg-white p-4"
+                  >
+                    <form onSubmit={saveEdit} className="space-y-3">
+                      <p className="text-sm font-semibold text-forest-900">
+                        Kişiyi düzenle
+                        {u.role === 'admin' && (
+                          <span className="ml-1 rounded-full bg-forest-200 px-2 py-0.5 text-[10px]">
+                            Admin
+                          </span>
+                        )}
+                      </p>
+                      <div className="grid gap-3 sm:grid-cols-2">
+                        <AuthField
+                          label="Ad soyad"
+                          value={editForm.name}
+                          onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                          required
+                        />
+                        <AuthField
+                          label="Yaş"
+                          type="number"
+                          value={editForm.age}
+                          onChange={(e) => setEditForm({ ...editForm, age: e.target.value })}
+                          required
+                        />
+                        <AuthField
+                          label="Kullanıcı adı"
+                          value={editForm.username}
+                          onChange={(e) => setEditForm({ ...editForm, username: e.target.value })}
+                          required
+                        />
+                        <AuthField
+                          label="Yeni şifre"
+                          type="password"
+                          value={editForm.password}
+                          onChange={(e) => setEditForm({ ...editForm, password: e.target.value })}
+                          placeholder="Boş bırakırsanız değişmez"
+                        />
+                      </div>
+                      <div className="flex gap-2">
+                        <AuthButton
+                          type="button"
+                          variant="secondary"
+                          className="flex-1"
+                          onClick={cancelEdit}
+                        >
+                          İptal
+                        </AuthButton>
+                        <AuthButton type="submit" loading={savingEdit} className="flex-1">
+                          Kaydet
+                        </AuthButton>
+                      </div>
+                    </form>
+                  </li>
+                ) : (
+                  <li
+                    key={u.id}
+                    className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-forest-100 bg-forest-50/50 px-4 py-3"
+                  >
+                    <div>
+                      <p className="text-sm font-semibold text-forest-900">
+                        {u.name}{' '}
+                        <span className="font-normal text-forest-500">@{u.username}</span>
+                        {u.role === 'admin' && (
+                          <span className="ml-1 rounded-full bg-forest-200 px-2 py-0.5 text-[10px]">
+                            Admin
+                          </span>
+                        )}
+                      </p>
+                      <p className="text-xs text-forest-500">Yaş: {u.age}</p>
+                    </div>
+                    <div className="flex gap-2">
                       <button
                         type="button"
-                        onClick={() => copyLoginInfo(u.username)}
+                        onClick={() => startEdit(u)}
                         className="rounded-lg bg-white px-3 py-1.5 text-xs font-semibold text-forest-800 ring-1 ring-forest-200"
                       >
-                        Kopyala
+                        Düzenle
                       </button>
-                    )}
-                    {u.role !== 'admin' && (
-                      <button
-                        type="button"
-                        onClick={() => onDeleteUser(u.id)}
-                        className="rounded-lg bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-700"
-                      >
-                        Sil
-                      </button>
-                    )}
-                  </div>
-                </li>
-              ))}
+                      {showShareButtons && (
+                        <button
+                          type="button"
+                          onClick={() => copyLoginInfo(u.username)}
+                          className="rounded-lg bg-white px-3 py-1.5 text-xs font-semibold text-forest-800 ring-1 ring-forest-200"
+                        >
+                          Kopyala
+                        </button>
+                      )}
+                      {u.role !== 'admin' && (
+                        <button
+                          type="button"
+                          onClick={() => onDeleteUser(u.id)}
+                          className="rounded-lg bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-700"
+                        >
+                          Sil
+                        </button>
+                      )}
+                    </div>
+                  </li>
+                )
+              )}
             </ul>
 
-            {!tentFull && canAddCampaignUser ? (
+            {!editingUser && !tentFull && canAddCampaignUser ? (
               <form onSubmit={addUser} className="space-y-3 border-t border-forest-100 pt-4">
-                <p className="text-sm font-semibold text-forest-900">Kişi ekle</p>
+                <p className="text-sm font-semibold text-forest-900">Yeni kişi ekle</p>
+                <p className="text-xs text-forest-500">
+                  Mevcut bir kişinin bilgilerini değiştirmek için yukarıdaki{' '}
+                  <strong>Düzenle</strong> butonunu kullanın.
+                </p>
                 <div className="grid gap-3 sm:grid-cols-2">
                   <AuthField
                     label="Ad soyad"
@@ -268,7 +401,7 @@ export default function TentDetailModal({
                   Kişi ekle
                 </AuthButton>
               </form>
-            ) : tentFull ? (
+            ) : !editingUser && tentFull ? (
               <p className="border-t border-forest-100 pt-4 text-xs text-forest-600">
                 Bu çadır dolu (en fazla {maxPerTent} kişi).
                 {!canAddCampaignUser && limits?.plan_tier === 'trial' && (
@@ -284,7 +417,7 @@ export default function TentDetailModal({
                   </>
                 )}
               </p>
-            ) : (
+            ) : !editingUser ? (
               <p className="border-t border-forest-100 pt-4 text-xs text-forest-600">
                 Deneme kişi limitine ulaştınız.{' '}
                 <button
@@ -295,7 +428,7 @@ export default function TentDetailModal({
                   Pro&apos;ya geçin
                 </button>
               </p>
-            )}
+            ) : null}
           </div>
         </div>
       </div>

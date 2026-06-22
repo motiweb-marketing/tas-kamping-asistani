@@ -1,13 +1,32 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { normalizeItemName } from '@/lib/item-names';
 import { dayMenuToFlat, rowsToDayMap } from '@/lib/menu-storage';
 import { getSession } from '@/lib/session';
 import { createServerClient } from '@/lib/supabase/server';
-import { buildSystemPrompt, callOpenRouter } from '@/lib/openrouter';
+import {
+  buildSystemPrompt,
+  callOpenRouter,
+  computeNeededCountFromQuantity,
+} from '@/lib/openrouter';
 import { getPlatformOpenRouterKey } from '@/lib/platform-settings';
 import { resolveOpenRouterKeyFromRow } from '@/lib/resolve-openrouter-key';
+import {
+  normalizeListGenerationContext,
+  type ListGenerationContext,
+} from '@/lib/list-generation-context';
+import { snapshotHeadcount } from '@/lib/sync-ai-list-quantities';
 
-export async function POST() {
+const MIN_PARTICIPANTS = 2;
+
+function countCampDays(startDate: string, endDate: string): number {
+  const start = new Date(startDate);
+  const end = new Date(endDate);
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return 3;
+  const diff = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
+  return Math.max(1, diff + 1);
+}
+
+export async function POST(request: NextRequest) {
   const session = await getSession();
   if (!session.isLoggedIn || session.user?.role !== 'admin') {
     return NextResponse.json({ error: 'Yetkisiz' }, { status: 403 });
@@ -16,9 +35,28 @@ export async function POST() {
   const campaignId = session.user.campaign_id;
   const supabase = createServerClient();
 
+  let context: ListGenerationContext;
+  try {
+    const body = await request.json();
+    context = normalizeListGenerationContext(body?.context);
+  } catch {
+    return NextResponse.json({ error: 'Geçersiz istek gövdesi' }, { status: 400 });
+  }
+
+  if (!context.headcount_confirmed) {
+    return NextResponse.json(
+      { error: 'Liste oluşturmadan önce kişi sayısının kesinleştiğini onaylamalısınız.' },
+      { status: 400 }
+    );
+  }
+
   const [campaignRes, usersRes, tentsRes, menusRes] = await Promise.all([
-    supabase.from('campaigns').select('openrouter_api_key, use_platform_ai, plan_tier').eq('id', campaignId).single(),
-    supabase.from('users').select('age').eq('campaign_id', campaignId),
+    supabase
+      .from('campaigns')
+      .select('openrouter_api_key, use_platform_ai, plan_tier, start_date, end_date')
+      .eq('id', campaignId)
+      .single(),
+    supabase.from('users').select('age, tent_id').eq('campaign_id', campaignId),
     supabase.from('tents').select('id').eq('campaign_id', campaignId),
     supabase.from('menus').select('id, day, meal_type, description').eq('campaign_id', campaignId),
   ]);
@@ -33,7 +71,7 @@ export async function POST() {
       {
         error: isPro
           ? 'AI şu an kullanılamıyor. Lütfen daha sonra tekrar deneyin veya destek ile iletişime geçin.'
-          : 'AI liste oluşturma Pro sürümde dahildir. Pro\'ya geçmek için Pro sayfasından bize yazın.',
+          : "AI liste oluşturma Pro sürümde dahildir. Pro'ya geçmek için Pro sayfasından bize yazın.",
       },
       { status: 400 }
     );
@@ -41,6 +79,25 @@ export async function POST() {
 
   const users = usersRes.data || [];
   const tents = tentsRes.data || [];
+  const headcount = snapshotHeadcount(users);
+
+  if (headcount.total < MIN_PARTICIPANTS) {
+    return NextResponse.json(
+      {
+        error: `Kişi sayısı net değil. En az ${MIN_PARTICIPANTS} kayıtlı kişi gerekli (şu an ${headcount.total}).`,
+      },
+      { status: 400 }
+    );
+  }
+
+  const usersWithoutTent = users.filter((u) => !u.tent_id).length;
+  if (usersWithoutTent > 0) {
+    return NextResponse.json(
+      { error: `${usersWithoutTent} kişinin çadırı atanmamış. Önce tüm kişilere çadır atayın.` },
+      { status: 400 }
+    );
+  }
+
   const dayMap = rowsToDayMap(menusRes.data || []);
   const flatMenus = Array.from(dayMap.entries()).flatMap(([day, { content }]) =>
     dayMenuToFlat(day, content)
@@ -59,15 +116,19 @@ export async function POST() {
     return NextResponse.json({ error: 'Önce menü tariflerini girin' }, { status: 400 });
   }
 
-  const adultCount = users.filter((u) => u.age >= 15).length;
-  const childCount = users.filter((u) => u.age < 15).length;
+  const campDays = countCampDays(
+    campaignRes.data?.start_date || '',
+    campaignRes.data?.end_date || ''
+  );
 
   const systemPrompt = buildSystemPrompt({
-    totalPeople: users.length,
-    adultCount,
-    childCount,
+    totalPeople: headcount.total,
+    adultCount: headcount.adults,
+    childCount: headcount.children,
     tentCount: tents.length || 1,
+    campDays,
     menuDetails: menus,
+    context,
   });
 
   try {
@@ -99,21 +160,26 @@ export async function POST() {
         return true;
       })
       .map((item) => ({
-      campaign_id: campaignId,
-      name: item.name,
-      quantity: item.quantity,
-      needed_count: 1,
-      unit_label: 'adet',
-      category: item.category,
-      disposition: 'consumable' as const,
-      list_scope: 'shared' as const,
-      is_recommendation: false,
-      is_standard: false,
-      is_extra: false,
-      is_published: false,
-      price: 0,
-      added_by: session.user!.id,
-    }));
+        campaign_id: campaignId,
+        name: item.name,
+        quantity: item.quantity,
+        quantity_amount: item.quantity_amount,
+        quantity_unit_text: item.quantity_unit,
+        scales_with_people: item.scales_with_people,
+        baseline_headcount: headcount.total,
+        needed_count: computeNeededCountFromQuantity(item.quantity_amount, item.quantity_unit),
+        unit_label: item.quantity_unit,
+        category: item.category,
+        disposition: 'consumable' as const,
+        list_scope: 'shared' as const,
+        is_recommendation: false,
+        is_standard: false,
+        is_extra: false,
+        is_published: false,
+        notes: item.notes || null,
+        price: 0,
+        added_by: session.user!.id,
+      }));
 
     if (!rows.length) {
       return NextResponse.json(
@@ -128,7 +194,22 @@ export async function POST() {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    return NextResponse.json({ items: data, count: data?.length || 0 });
+    await supabase
+      .from('campaigns')
+      .update({
+        list_generation_context: context,
+        list_baseline_headcount: headcount.total,
+        list_baseline_adults: headcount.adults,
+        list_baseline_children: headcount.children,
+        list_generated_at: new Date().toISOString(),
+      })
+      .eq('id', campaignId);
+
+    return NextResponse.json({
+      items: data,
+      count: data?.length || 0,
+      headcount: headcount.total,
+    });
   } catch (err) {
     const message = err instanceof Error ? err.message : 'AI hatası';
     return NextResponse.json({ error: message }, { status: 500 });

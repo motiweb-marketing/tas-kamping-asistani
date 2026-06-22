@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { hashPassword } from '@/lib/auth';
 import { formatPersonName } from '@/lib/format';
-import { syncStandardSharedItems } from '@/lib/sync-standard-items';
+import { syncAllListQuantities } from '@/lib/sync-ai-list-quantities';
+import { isUsernameTaken, mapUserDbError, normalizeUsername } from '@/lib/user-validation';
 import { getSession } from '@/lib/session';
 import { createServerClient } from '@/lib/supabase/server';
 
@@ -16,6 +17,8 @@ export async function PATCH(
 
   const body = await request.json();
   const updates: Record<string, unknown> = {};
+  const supabase = createServerClient();
+  const campaignId = session.user.campaign_id;
 
   if (body.name !== undefined) {
     const name = formatPersonName(String(body.name));
@@ -26,7 +29,19 @@ export async function PATCH(
   }
   if (body.age !== undefined) updates.age = Number(body.age);
   if (body.tent_id !== undefined) updates.tent_id = body.tent_id || null;
-  if (body.username !== undefined) updates.username = String(body.username).trim();
+  if (body.username !== undefined) {
+    const cleanUsername = normalizeUsername(String(body.username));
+    if (!cleanUsername) {
+      return NextResponse.json({ error: 'Geçerli bir kullanıcı adı girin' }, { status: 400 });
+    }
+    if (await isUsernameTaken(supabase, campaignId, cleanUsername, params.id)) {
+      return NextResponse.json(
+        { error: 'Bu kullanıcı adı zaten kullanılıyor.' },
+        { status: 400 }
+      );
+    }
+    updates.username = cleanUsername;
+  }
   if (body.password) {
     updates.password_hash = await hashPassword(String(body.password));
   }
@@ -35,21 +50,20 @@ export async function PATCH(
     return NextResponse.json({ error: 'Güncellenecek alan yok' }, { status: 400 });
   }
 
-  const supabase = createServerClient();
   const { data, error } = await supabase
     .from('users')
     .update(updates)
     .eq('id', params.id)
-    .eq('campaign_id', session.user.campaign_id)
+    .eq('campaign_id', campaignId)
     .select('id, campaign_id, tent_id, name, age, role, username, created_at')
     .single();
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: mapUserDbError(error.message) }, { status: 500 });
   }
 
   try {
-    await syncStandardSharedItems(supabase, session.user.campaign_id);
+    await syncAllListQuantities(supabase, campaignId);
   } catch {
     /* ignore */
   }
@@ -82,7 +96,7 @@ export async function DELETE(
   }
 
   try {
-    await syncStandardSharedItems(supabase, session.user.campaign_id);
+    await syncAllListQuantities(supabase, session.user.campaign_id);
   } catch {
     /* ignore */
   }

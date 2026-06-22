@@ -4,7 +4,7 @@ import { getCampaignLimits } from '@/lib/campaign-limits';
 import { parseUsersFile } from '@/lib/user-import';
 import { formatPersonName, formatTitleCase } from '@/lib/format';
 import { requirePlatformAdmin } from '@/lib/platform-auth';
-import { syncStandardSharedItems } from '@/lib/sync-standard-items';
+import { syncAllListQuantities } from '@/lib/sync-ai-list-quantities';
 import { createServerClient } from '@/lib/supabase/server';
 
 export async function POST(
@@ -140,7 +140,7 @@ export async function POST(
   }
 
   try {
-    await syncStandardSharedItems(supabase, campaignId);
+    await syncAllListQuantities(supabase, campaignId);
   } catch {
     /* ignore */
   }

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { enrichItemWithClaims, normalizeClaims } from '@/lib/item-claims';
-import { syncStandardSharedItems } from '@/lib/sync-standard-items';
+import { syncAllListQuantities } from '@/lib/sync-ai-list-quantities';
 import { getSession } from '@/lib/session';
 import { createServerClient } from '@/lib/supabase/server';
 import type { CampDutyWithRelations, ItemWithRelations } from '@/types';
@@ -16,7 +16,7 @@ export async function GET() {
   const tentId = session.user.tent_id;
 
   try {
-    await syncStandardSharedItems(supabase, campaignId);
+    await syncAllListQuantities(supabase, campaignId);
   } catch {
     /* migration pending */
   }

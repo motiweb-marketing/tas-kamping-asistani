@@ -8,7 +8,8 @@ import {
   upgradeHint,
 } from '@/lib/campaign-limits';
 import { formatPersonName } from '@/lib/format';
-import { syncStandardSharedItems } from '@/lib/sync-standard-items';
+import { syncAllListQuantities } from '@/lib/sync-ai-list-quantities';
+import { isUsernameTaken, mapUserDbError, normalizeUsername } from '@/lib/user-validation';
 import { getSession } from '@/lib/session';
 import { createServerClient } from '@/lib/supabase/server';
 
@@ -45,10 +46,23 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Eksik alanlar' }, { status: 400 });
   }
 
+  const cleanUsername = normalizeUsername(String(username));
+  if (!cleanUsername) {
+    return NextResponse.json({ error: 'Geçerli bir kullanıcı adı girin' }, { status: 400 });
+  }
+
   const password_hash = await hashPassword(password);
   const supabase = createServerClient();
+  const campaignId = session.user.campaign_id;
 
-  const limits = await getCampaignLimits(supabase, session.user.campaign_id);
+  if (await isUsernameTaken(supabase, campaignId, cleanUsername)) {
+    return NextResponse.json(
+      { error: 'Bu kullanıcı adı zaten kullanılıyor. Farklı bir ad seçin veya mevcut kişiyi düzenleyin.' },
+      { status: 400 }
+    );
+  }
+
+  const limits = await getCampaignLimits(supabase, campaignId);
   if (!limits.can_add_user) {
     return NextResponse.json(
       { error: limitErrorMessage('user', limits), limits, upgrade: upgradeHint() },
@@ -81,7 +95,7 @@ export async function POST(request: NextRequest) {
       name: formatPersonName(name),
       age: age || 30,
       tent_id: tent_id || null,
-      username,
+      username: cleanUsername,
       password_hash,
       role,
     })
@@ -89,11 +103,11 @@ export async function POST(request: NextRequest) {
     .single();
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: mapUserDbError(error.message) }, { status: 500 });
   }
 
   try {
-    await syncStandardSharedItems(supabase, session.user.campaign_id);
+    await syncAllListQuantities(supabase, campaignId);
   } catch {
     /* ignore */
   }

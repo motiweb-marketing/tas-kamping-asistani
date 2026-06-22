@@ -1,4 +1,11 @@
-import type { AiGeneratedItem, MenuSummaryLine } from '@/types';
+import type { AiGeneratedItem, ItemCategory, MenuSummaryLine } from '@/types';
+import type { ListGenerationContext } from '@/lib/list-generation-context';
+import { formatListContextForPrompt } from '@/lib/list-generation-context';
+import {
+  computeNeededCountFromQuantity,
+  guessScalesWithPeople,
+  parseQuantityString,
+} from '@/lib/quantity-parser';
 
 const OPENROUTER_HEADERS = {
   'Content-Type': 'application/json',
@@ -11,7 +18,16 @@ interface PromptParams {
   adultCount: number;
   childCount: number;
   tentCount: number;
+  campDays: number;
   menuDetails: MenuSummaryLine[];
+  context: ListGenerationContext;
+}
+
+export interface AiGeneratedItemStructured extends AiGeneratedItem {
+  quantity_amount: number;
+  quantity_unit: string;
+  scales_with_people: boolean;
+  notes?: string;
 }
 
 export function buildSystemPrompt(params: PromptParams): string {
@@ -36,23 +52,51 @@ export function buildSystemPrompt(params: PromptParams): string {
     })
     .join('\n');
 
-  return `Sen kampa gidecek bir grubun asistanısın. Grupta toplam ${params.totalPeople} kişi var (${params.adultCount} yetişkin, ${params.childCount} çocuk). Katılımcılar ${params.tentCount} adet çadırda kalacak.
+  const contextBlock = formatListContextForPrompt(params.context);
 
-İşte gün gün kamp menüsü:
+  return `Sen profesyonel bir kamp mutfak ve lojistik planlayıcısısın.
+
+GRUP BİLGİSİ (KESİN — tüm miktarları buna göre hesapla):
+- Toplam ${params.totalPeople} kişi (${params.adultCount} yetişkin, ${params.childCount} çocuk)
+- ${params.tentCount} çadır
+- ${params.campDays} kamp günü
+
+KAMP MENÜSÜ:
 ${menuText}
 
-Bu menüye ve kişi sayısına göre ORTAK KAMP ALIŞVERİŞ listesi çıkar.
+GRUP TERCİHLERİ:
+${contextBlock}
 
-ÖNEMLİ — listeye KESİNLİKLE DAHİL ETME (bunlar sistemde zaten var):
+GÖREV: Bu menü için ORTAK KAMP ALIŞVERİŞ listesi oluştur. Eksiksiz, milimetrik, uygulanabilir olmalı.
+
+HESAPLAMA KURALLARI:
+1. Her yemek için malzeme + pişirme ekipmanı + servis düşün.
+   Örnek pilav: pirinç, yağ, tuz, su + tencere + kapak + kepçe/kaşık.
+   Örnek mangal: kömür/odun, çakmak, ızgara teli, maşa, eldiven, kömür kovası, yağlı kağıt/alüminyum folyo.
+2. Kişi başı porsiyon hesapla; çocukları ~%70 porsiyon say.
+3. Fire payı: kuru gıdada %10, sebzedey %15, kömürde mangal başına yeterli + yedek.
+4. Kahvaltı, ara öğün, akşam yemeği ve içecekleri ayrı ayrı hesapla.
+5. Bulaşık: deterjan, sünger, eldiven, kurulama bezi, çöp poşeti (gün sayısına göre).
+6. Baharat/temel: tuz, karabiber, pul biber, zeytinyağı/ayçiçek yağı (menüde geçenlere göre).
+7. Tek seferlik ekipman (1 mangal, 1 büyük tencere) scales_with_people=false; tüketimlikler true.
+
+KESİNLİKLE DAHİL ETME (sistemde zaten var):
 - Tabak, bardak, çay bardağı, çatal, kaşık, bıçak, peçete (standart liste)
 - Deniz ayakkabısı, güneş kremi, şapka, mayo, kişisel ilaçlar (kişisel liste)
 - Çoklu priz, çadır ışığı, sinek spreyi, uyku tulumu (çadır listesi)
 
-Sadece menüye özel yiyecek ve tüketimlik ortak malzemeleri ekle:
-- Menüdeki tüm yiyecek ve içecek malzemeleri (category: food)
-- Ortak kullanım ekipmanı: büyük kamp buzluğu/termos, mangal kömürü/odun, ortak pişirme tencere/tava, tabak-bardak seti (kişi sayısına göre), çöp poşeti, bulaşık süngeri/deterjan (category: equipment)
+JSON FORMATI — her öğe:
+{
+  "name": "Malzeme adı",
+  "quantity": "2.4 kg",
+  "quantity_amount": 2.4,
+  "quantity_unit": "kg",
+  "scales_with_people": true,
+  "category": "food" veya "equipment",
+  "notes": "Kısa açıklama (isteğe bağlı)"
+}
 
-Sadece JSON formatında dönecek bir liste ver. Her öğe: {"name": "...", "quantity": "...", "category": "food" veya "equipment"}
+quantity_amount sayısal olmalı. quantity = quantity_amount + boşluk + quantity_unit.
 Yanıtın SADECE JSON array olmalı, başka metin ekleme.`;
 }
 
@@ -115,7 +159,7 @@ async function callOpenRouterRaw(
         { role: 'system', content: systemPrompt },
         { role: 'user', content: userMessage },
       ],
-      temperature: 0.4,
+      temperature: 0.35,
     }),
   });
 
@@ -128,13 +172,47 @@ async function callOpenRouterRaw(
   return data.choices?.[0]?.message?.content || '';
 }
 
+function normalizeAiItem(raw: Record<string, unknown>): AiGeneratedItemStructured | null {
+  const name = String(raw.name ?? '').trim();
+  if (!name) return null;
+
+  const category: ItemCategory = raw.category === 'equipment' ? 'equipment' : 'food';
+
+  let amount = Number(raw.quantity_amount);
+  let unit = String(raw.quantity_unit ?? '').trim();
+
+  if (Number.isNaN(amount) || amount <= 0 || !unit) {
+    const parsed = parseQuantityString(String(raw.quantity ?? ''));
+    if (!parsed) return null;
+    amount = parsed.amount;
+    unit = parsed.unit;
+  }
+
+  const scales =
+    typeof raw.scales_with_people === 'boolean'
+      ? raw.scales_with_people
+      : guessScalesWithPeople(unit, category);
+
+  const quantity = `${amount} ${unit}`.replace(/(\d+)\.(\d+)0+\s/, '$1.$2 ');
+
+  return {
+    name,
+    quantity,
+    quantity_amount: amount,
+    quantity_unit: unit,
+    scales_with_people: scales,
+    category,
+    notes: raw.notes ? String(raw.notes).trim() : undefined,
+  };
+}
+
 export async function callOpenRouter(
   systemPrompt: string,
   apiKey: string
-): Promise<AiGeneratedItem[]> {
+): Promise<AiGeneratedItemStructured[]> {
   const content = await callOpenRouterRaw(
     systemPrompt,
-    'Alışveriş listesini JSON array olarak oluştur.',
+    'Yukarıdaki kurallara göre eksiksiz alışveriş listesini JSON array olarak oluştur.',
     apiKey
   );
 
@@ -143,13 +221,19 @@ export async function callOpenRouter(
     throw new Error('AI yanıtı JSON formatında değil');
   }
 
-  const items: AiGeneratedItem[] = JSON.parse(jsonMatch[0]);
+  const parsed = JSON.parse(jsonMatch[0]) as Record<string, unknown>[];
+  const items: AiGeneratedItemStructured[] = [];
 
-  return items.map((item) => ({
-    name: item.name,
-    quantity: String(item.quantity),
-    category: item.category === 'equipment' ? 'equipment' : 'food',
-  }));
+  for (const raw of parsed) {
+    const item = normalizeAiItem(raw);
+    if (item) items.push(item);
+  }
+
+  if (!items.length) {
+    throw new Error('AI geçerli liste üretemedi');
+  }
+
+  return items;
 }
 
 export async function callOpenRouterMenuPublish(
@@ -169,3 +253,5 @@ export async function callOpenRouterMenuPublish(
 
   return JSON.parse(jsonMatch[0]) as RawDayMenuInput[];
 }
+
+export { computeNeededCountFromQuantity };
