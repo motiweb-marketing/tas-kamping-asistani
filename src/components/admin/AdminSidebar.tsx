@@ -9,7 +9,6 @@ import {
   LayoutDashboard,
   ListChecks,
   Menu,
-  Settings,
   Share2,
   Tent,
   User,
@@ -48,7 +47,6 @@ const NAV: NavItem[] = [
   { href: '/admin/listeler/cadir', label: 'Çadır ihtiyaçları', icon: Tent },
   { href: '/admin/listeler/kamp', label: 'Kamp ihtiyaçları', icon: ListChecks },
   { type: 'divider', label: 'Sistem' },
-  { href: '/admin/ayarlar', label: 'Ayarlar (AI)', icon: Settings },
   { href: '/admin/paylas', label: 'Giriş bilgisi paylaş', icon: Share2 },
 ];
 

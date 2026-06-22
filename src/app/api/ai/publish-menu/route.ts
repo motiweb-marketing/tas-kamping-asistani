@@ -22,7 +22,7 @@ export async function POST() {
   const [campaignRes, menusRes] = await Promise.all([
     supabase
       .from('campaigns')
-      .select('openrouter_api_key, use_platform_ai, menu_ai_prompt, start_date, end_date')
+      .select('openrouter_api_key, use_platform_ai, plan_tier, menu_ai_prompt, start_date, end_date')
       .eq('id', campaignId)
       .single(),
     supabase.from('menus').select('id, day, meal_type, description').eq('campaign_id', campaignId),
@@ -32,11 +32,12 @@ export async function POST() {
   const apiKey = resolveOpenRouterKeyFromRow(campaign);
 
   if (!apiKey) {
+    const isPro = campaign?.plan_tier === 'paid';
     return NextResponse.json(
       {
-        error: campaign?.use_platform_ai
-          ? 'Platform AI paketi henüz aktif değil. Satıcıyla iletişime geçin.'
-          : 'OpenRouter API anahtarı tanımlı değil. Admin → Ayarlar sayfasından girin.',
+        error: isPro
+          ? 'AI şu an kullanılamıyor. Lütfen daha sonra tekrar deneyin veya destek ile iletişime geçin.'
+          : 'AI menü düzenleme Pro sürümde dahildir. Pro\'ya geçmek için Pro sayfasından bize yazın.',
       },
       { status: 400 }
     );

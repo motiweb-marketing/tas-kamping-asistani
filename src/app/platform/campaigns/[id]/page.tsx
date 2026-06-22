@@ -91,13 +91,8 @@ export default function PlatformCampaignDetailPage() {
   }
 
   async function setPlan(tier: 'trial' | 'paid') {
-    if (!confirm(tier === 'paid' ? 'Bu kampı Pro yapmak istiyor musunuz?' : 'Deneme planına döndürmek istiyor musunuz?')) return;
+    if (!confirm(tier === 'paid' ? 'Bu kampı Pro yapmak istiyor musunuz? AI özelliği otomatik açılır.' : 'Deneme planına döndürmek istiyor musunuz?')) return;
     await patchCampaign({ plan_tier: tier });
-  }
-
-  async function togglePlatformAi() {
-    if (!campaign) return;
-    await patchCampaign({ use_platform_ai: !campaign.use_platform_ai });
   }
 
   async function deleteUser(userId: string, name: string) {
@@ -210,7 +205,7 @@ export default function PlatformCampaignDetailPage() {
                 onClick={() => setPlan('paid')}
                 className="rounded-lg bg-emerald-700 px-4 py-2 text-sm font-semibold text-white"
               >
-                Pro&apos;ya yükselt
+                Pro&apos;ya yükselt (AI dahil)
               </button>
             ) : (
               <button
@@ -222,20 +217,10 @@ export default function PlatformCampaignDetailPage() {
                 Denemeye al
               </button>
             )}
-            <button
-              type="button"
-              disabled={saving}
-              onClick={togglePlatformAi}
-              className={`rounded-lg px-4 py-2 text-sm font-semibold ${
-                campaign.use_platform_ai ? 'bg-indigo-600 text-white' : 'bg-slate-700 text-slate-200'
-              }`}
-            >
-              {campaign.use_platform_ai ? 'Platform AI açık' : 'Platform AI kapalı'}
-            </button>
           </div>
           <p className="mt-3 text-xs text-slate-500">
-            Platform AI: sizin OpenRouter anahtarınızı kullanır (ayrı fiyatlandırılabilir).
-            {campaign.has_own_ai_key && ' Müşterinin kendi anahtarı da kayıtlı.'}
+            Pro planda AI ile menü düzenleme ve alışveriş listesi oluşturma otomatik dahildir.
+            {campaign.has_own_ai_key && ' (Eski müşteri API anahtarı kayıtlı — artık kullanılmıyor.)'}
           </p>
         </section>
 

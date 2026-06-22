@@ -34,6 +34,7 @@ export default function PlatformDashboardPage() {
   const [stats, setStats] = useState<Stats | null>(null);
   const [filter, setFilter] = useState<'all' | 'trial' | 'paid'>('all');
   const [loading, setLoading] = useState(true);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     const res = await fetch('/api/platform/campaigns');
@@ -48,6 +49,25 @@ export default function PlatformDashboardPage() {
   useEffect(() => {
     load();
   }, [load]);
+
+  async function deleteCampaign(c: PlatformCampaignSummary) {
+    if (
+      !confirm(
+        `"${c.name}" kampı ve TÜM verileri (çadırlar, kişiler, listeler) kalıcı silinecek. Emin misiniz?`
+      )
+    ) {
+      return;
+    }
+    setDeletingId(c.id);
+    const res = await fetch(`/api/platform/campaigns/${c.id}`, { method: 'DELETE' });
+    setDeletingId(null);
+    if (!res.ok) {
+      const data = await res.json();
+      alert(data.error || 'Silinemedi');
+      return;
+    }
+    load();
+  }
 
   const filtered = campaigns.filter((c) => {
     if (filter === 'trial') return c.plan_tier === 'trial';
@@ -75,8 +95,8 @@ export default function PlatformDashboardPage() {
 
       {stats && (
         <p className="mb-6 text-sm text-slate-400">
-          Platform AI paketi: {stats.platform_ai} kamp aktif
-          {stats.platform_ai_available ? ' · anahtar yapılandırılmış' : ' · PLATFORM_OPENROUTER_API_KEY eksik'}
+          Pro kamplarda AI liste ve menü özelliği otomatik dahildir.
+          {stats.platform_ai_available ? '' : ' · PLATFORM_OPENROUTER_API_KEY eksik — AI çalışmaz'}
         </p>
       )}
 
@@ -144,19 +164,29 @@ export default function PlatformDashboardPage() {
                   </td>
                   <td className="px-4 py-3 text-slate-400">{formatDate(c.last_login_at)}</td>
                   <td className="px-4 py-3">
-                    {c.use_platform_ai ? (
-                      <span className="text-indigo-400">Platform</span>
+                    {c.plan_tier === 'paid' ? (
+                      <span className="text-emerald-400">Dahil</span>
                     ) : (
-                      <span className="text-slate-600">Kendi</span>
+                      <span className="text-slate-600">Pro gerekli</span>
                     )}
                   </td>
                   <td className="px-4 py-3 text-right">
-                    <Link
-                      href={`/platform/campaigns/${c.id}`}
-                      className="font-semibold text-indigo-400 hover:text-indigo-300"
-                    >
-                      Yönet →
-                    </Link>
+                    <div className="flex items-center justify-end gap-3">
+                      <Link
+                        href={`/platform/campaigns/${c.id}`}
+                        className="font-semibold text-indigo-400 hover:text-indigo-300"
+                      >
+                        Yönet →
+                      </Link>
+                      <button
+                        type="button"
+                        disabled={deletingId === c.id}
+                        onClick={() => deleteCampaign(c)}
+                        className="font-semibold text-red-400 hover:text-red-300 disabled:opacity-50"
+                      >
+                        {deletingId === c.id ? '...' : 'Sil'}
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}

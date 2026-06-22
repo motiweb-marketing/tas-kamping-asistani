@@ -41,18 +41,12 @@ export default function SetupChecklist({
     {
       done: hasDates,
       label: 'Kamp tarihlerini ayarlayın',
-      href: '/admin/camp-settings',
-    },
-    {
-      done: hasApiKey,
-      label: '(Opsiyonel) AI için API anahtarı girin',
-      href: '/admin/settings',
-      optional: true,
+      href: '/admin/kamp',
     },
     {
       done: menuCount > 0 && itemCount > 0,
       label: 'Menü yazın ve ortak listeyi yayınlayın',
-      href: '/admin/camp-settings',
+      href: '/admin/listeler',
     },
     {
       done: sharedCreds,
@@ -81,9 +75,6 @@ export default function SetupChecklist({
               <span className="mt-0.5">{s.done ? '✅' : '⬜'}</span>
               <span className={s.done ? 'text-gray-600 line-through' : 'text-gray-900'}>
                 {s.label}
-                {s.optional && (
-                  <span className="ml-1 text-sm text-gray-500">(opsiyonel)</span>
-                )}
               </span>
             </Link>
           </li>

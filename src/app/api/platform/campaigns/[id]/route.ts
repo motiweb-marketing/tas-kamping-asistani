@@ -59,19 +59,22 @@ export async function PATCH(
 
   if (body.plan_tier === 'trial' || body.plan_tier === 'paid') {
     updates.plan_tier = body.plan_tier;
-    if (body.plan_tier === 'paid' && body.max_tents === undefined) {
-      updates.max_tents = 99;
-      updates.max_users = 99;
+    if (body.plan_tier === 'paid') {
+      if (body.max_tents === undefined) {
+        updates.max_tents = 99;
+        updates.max_users = 99;
+      }
+      updates.use_platform_ai = true;
     }
     if (body.plan_tier === 'trial' && body.max_tents === undefined) {
       updates.max_tents = 1;
       updates.max_users = 2;
+      updates.use_platform_ai = false;
     }
   }
 
   if (body.max_tents !== undefined) updates.max_tents = Number(body.max_tents);
   if (body.max_users !== undefined) updates.max_users = Number(body.max_users);
-  if (body.use_platform_ai !== undefined) updates.use_platform_ai = !!body.use_platform_ai;
   if (body.platform_notes !== undefined) updates.platform_notes = String(body.platform_notes || '');
   if (body.owner_contact_name !== undefined) {
     updates.owner_contact_name = body.owner_contact_name || null;

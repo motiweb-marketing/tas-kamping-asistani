@@ -283,10 +283,17 @@ export default function CampSettingsPage() {
 
       {!apiSettings?.configured && (
         <div className="rounded-xl bg-amber-100 p-4 text-lg text-amber-900">
-          AI için OpenRouter API anahtarını girin.{' '}
-          <Link href="/admin/ayarlar" className="font-semibold underline">
-            Ayarlar →
-          </Link>
+          {apiSettings?.is_pro ? (
+            <>AI şu an geçici olarak kullanılamıyor. Bir süre sonra tekrar deneyin.</>
+          ) : (
+            <>
+              AI menü ve liste özelliği Pro sürümde dahildir.{' '}
+              <Link href="/admin/pro" className="font-semibold underline">
+                Pro sayfasından
+              </Link>{' '}
+              bize yazın.
+            </>
+          )}
         </div>
       )}
 

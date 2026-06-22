@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation';
 
-export default function SettingsRedirect() {
-  redirect('/admin/ayarlar');
+export default function AdminSettingsRedirect() {
+  redirect('/admin/pro');
 }

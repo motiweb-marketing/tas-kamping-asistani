@@ -176,8 +176,9 @@ export interface LoginInput {
   campaign_id?: string;
 }
 
-/** Admin ayarlar sayfası — maskelenmiş API anahtarı durumu */
+/** Kamp AI durumu — müşteri API anahtarı girmez */
 export interface CampaignSettings {
   configured: boolean;
+  is_pro?: boolean;
   masked_key: string;
 }

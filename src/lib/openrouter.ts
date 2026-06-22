@@ -100,7 +100,7 @@ async function callOpenRouterRaw(
   apiKey: string
 ): Promise<string> {
   if (!apiKey?.trim()) {
-    throw new Error('OpenRouter API anahtarı tanımlı değil. Admin → Ayarlar sayfasından girin.');
+    throw new Error('AI şu an kullanılamıyor. Pro sürümde bu özellik otomatik dahildir.');
   }
 
   const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {

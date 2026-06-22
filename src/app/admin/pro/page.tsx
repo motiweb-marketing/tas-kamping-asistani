@@ -29,8 +29,8 @@ export default async function ProPage() {
         </div>
         <p className="mt-1 text-sm text-forest-600">
           {isPro
-            ? 'Kampınız tam sürümde. Sınırsız çadır ve katılımcı ekleyebilirsiniz.'
-            : 'Deneme sürümündesiniz. Pro ile limitler kalkar.'}
+            ? 'Kampınız tam sürümde. Sınırsız çadır, katılımcı ve AI ile liste/menü özelliği dahil.'
+            : 'Deneme sürümündesiniz. Pro ile limitler kalkar ve AI özellikleri açılır.'}
         </p>
       </header>
 
@@ -55,7 +55,7 @@ export default async function ProPage() {
                 Pro satın almak için aşağıdan bize yazın — kamp adınızı (
                 <strong>{campaign?.name}</strong>) belirtin.
               </li>
-              <li>Ödeme onayından sonra kampınız Pro&apos;ya yükseltilir; limitler otomatik kalkar.</li>
+              <li>Ödeme onayından sonra kampınız Pro&apos;ya yükseltilir; limitler ve AI otomatik açılır.</li>
               <li>Aynı adresten giriş yapın — ekstra kurulum gerekmez.</li>
             </ol>
           </div>
