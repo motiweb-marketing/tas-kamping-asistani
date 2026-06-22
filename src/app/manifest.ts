@@ -6,7 +6,7 @@ export default function manifest(): MetadataRoute.Manifest {
     name: SITE.name,
     short_name: 'Kamp Asistanı',
     description: SITE.description,
-    start_url: '/items',
+    start_url: '/home',
     scope: '/',
     display: 'standalone',
     orientation: 'portrait',

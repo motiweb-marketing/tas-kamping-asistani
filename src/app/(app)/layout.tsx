@@ -18,12 +18,12 @@ export default async function AppLayout({
   }
 
   return (
-    <div className="mx-auto min-h-screen max-w-lg pb-24 md:max-w-3xl lg:max-w-5xl">
+    <div className="mx-auto min-h-screen max-w-lg bg-sand-50 pb-28 md:max-w-3xl lg:max-w-5xl">
       <AppHeader
         userName={session.user?.name || ''}
         isAdmin={session.user?.role === 'admin'}
       />
-      <main className="p-4">
+      <main className="p-4 sm:p-5">
         <InstallPrompt />
         {session.user?.role !== 'admin' && <FirstVisitTour />}
         {children}

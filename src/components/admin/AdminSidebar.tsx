@@ -36,7 +36,7 @@ function isNavLink(item: NavItem): item is NavLinkItem {
 }
 
 const NAV: NavItem[] = [
-  { href: '/admin/kurulum', label: 'Program tanıtımı', icon: Wand2, highlight: true },
+  { href: '/admin/kurulum', label: 'Kurulum sihirbazı', icon: Wand2, highlight: true },
   { href: '/admin', label: 'Genel bakış', icon: LayoutDashboard },
   { type: 'divider', label: 'Düzenle' },
   { href: '/admin/kamp', label: 'Kamp bilgileri', icon: Calendar },
@@ -148,7 +148,7 @@ export default function AdminSidebar() {
         <div className="space-y-2 border-t border-forest-100 p-4">
           <PlanStatusChip />
           <Link
-            href="/items"
+            href="/home"
             className="flex min-h-[44px] w-full items-center justify-center rounded-lg border border-forest-200 py-2 text-sm font-semibold text-forest-800 hover:bg-forest-50"
           >
             Kampa git →
@@ -172,7 +172,7 @@ export default function AdminSidebar() {
             {SITE.name}
           </Link>
           <Link
-            href="/items"
+            href="/home"
             className="shrink-0 rounded-lg bg-forest-100 px-2.5 py-2 text-xs font-semibold text-forest-800"
           >
             Kampa
@@ -212,7 +212,7 @@ export default function AdminSidebar() {
             <div className="space-y-2 border-t border-forest-100 p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
               <PlanStatusChip />
               <Link
-                href="/items"
+                href="/home"
                 onClick={() => setMenuOpen(false)}
                 className="flex min-h-[44px] w-full items-center justify-center rounded-lg border border-forest-200 py-2 text-sm font-semibold text-forest-800"
               >

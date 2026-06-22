@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import MenuReminderBanner from '@/components/admin/MenuReminderBanner';
 import PlanBadge from '@/components/admin/PlanBadge';
 import { getCampaignLimits } from '@/lib/campaign-limits';
 import { getSession } from '@/lib/session';
@@ -33,7 +34,8 @@ export default async function AdminPage() {
   ];
 
   const quickLinks = [
-    { href: '/admin/kurulum', label: 'Program tanıtımı' },
+    { href: '/admin/kurulum', label: 'Kurulum sihirbazı' },
+    { href: '/home', label: 'Kullanıcı ana sayfası' },
     { href: '/summary', label: 'Kamp özeti — kim ne getiriyor?' },
     { href: '/admin/listeler', label: 'Listeler (kişisel, çadır, kamp)' },
     { href: '/admin/paylas', label: 'Giriş bilgisini paylaş' },
@@ -53,6 +55,8 @@ export default async function AdminPage() {
           {campaignData?.start_date} — {campaignData?.end_date}
         </p>
       </div>
+
+      <MenuReminderBanner />
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         {stats.map((s) => (

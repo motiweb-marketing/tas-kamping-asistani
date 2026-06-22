@@ -2,28 +2,28 @@
 
 import { useEffect, useState } from 'react';
 
-const STORAGE_KEY = 'kamp-asistani-tour-v1-done';
+const STORAGE_KEY = 'kamp-asistani-tour-v2-done';
 
 const STEPS = [
   {
+    title: 'Ana Sayfa',
+    body: 'Kampa kalan süre, eksik malzemeler ve hızlı işlemler burada. Her girişte önce buraya bakın.',
+    icon: '🏠',
+  },
+  {
     title: 'Liste',
-    body: 'Ortak listeden malzeme arayın ve adet seçerek üstlenin. Kişisel ve çadır listeleriniz ayrı sekmelerde.',
+    body: 'Ortak listeden malzeme arayın ve "Ben Getiriyorum" ile adet seçerek üstlenin.',
     icon: '📋',
   },
   {
-    title: 'Harcama',
-    body: 'Market fişlerini Harcama sekmesinden girin. Bakiye sekmesinde çadır bazlı paylaşımı görün.',
-    icon: '💰',
+    title: 'Sorumluluklarım',
+    body: 'Üstlendiğiniz malzemeler, kişisel eşyalar ve nöbetler tek ekranda.',
+    icon: '⛺',
   },
   {
-    title: 'Nöbet',
-    body: 'Nöbet Planı sayfasından yemek, mangal veya çay nöbetini üstlenin.',
-    icon: '📅',
-  },
-  {
-    title: 'Chat',
-    body: 'Kamp sohbetinde duyuru yapın; liste güncellemeleri burada da görünür.',
-    icon: '💬',
+    title: 'Yola çıkış kontrolü',
+    body: 'Kamp öncesi arabaya binmeden tüm eşyaları tek tek işaretleyin.',
+    icon: '🚗',
   },
 ];
 
@@ -68,14 +68,14 @@ export default function FirstVisitTour() {
           <button
             type="button"
             onClick={finish}
-            className="min-h-[44px] rounded-xl px-4 text-gray-600"
+            className="min-h-[48px] rounded-xl px-4 text-gray-600"
           >
             Atla
           </button>
           <button
             type="button"
             onClick={() => (isLast ? finish() : setStep(step + 1))}
-            className="min-h-[44px] flex-1 rounded-xl bg-emerald-600 font-semibold text-white"
+            className="min-h-[48px] flex-1 rounded-xl bg-emerald-600 text-lg font-semibold text-white"
           >
             {isLast ? 'Tamam' : 'İleri'}
           </button>

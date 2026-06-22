@@ -6,6 +6,8 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import AddExpenseForm from '@/components/budget/AddExpenseForm';
 import ExpenseList from '@/components/budget/ExpenseList';
 import TentBalanceCard from '@/components/budget/TentBalanceCard';
+import PageHeader from '@/components/ui/PageHeader';
+import SectionCard from '@/components/ui/SectionCard';
 import type { BudgetSummary, CampExpenseWithRelations, ItemWithRelations, SessionUser } from '@/types';
 
 type BudgetTab = 'harcamalar' | 'bakiye';
@@ -92,16 +94,13 @@ function BudgetContent() {
   if (loading) return <p className="text-lg text-gray-500">Yükleniyor...</p>;
 
   return (
-    <div className="flex flex-col gap-4">
-      <div>
-        <h2 className="text-xl font-bold">Bütçe & Harcamalar</h2>
-        <p className="mt-1 text-sm text-gray-600">
-          Alışveriş tutarlarını <strong>Harcamalar</strong> sekmesinden girin; kimin ne kadar ödediği{' '}
-          <strong>Bakiye</strong> sekmesinde hesaplanır.
-        </p>
-      </div>
+    <div className="flex flex-col gap-5">
+      <PageHeader
+        title="Bütçe & Harcamalar"
+        subtitle="Alışveriş tutarlarını Harcamalar sekmesinden girin; Bakiye sekmesinde çadır bazlı paylaşımı görün."
+      />
 
-      <div className="flex gap-2 rounded-xl bg-gray-100 p-1">
+      <div className="flex gap-2 rounded-2xl bg-gray-100 p-1.5">
         <button
           type="button"
           onClick={() => setTab('harcamalar')}
@@ -124,22 +123,23 @@ function BudgetContent() {
 
       {tab === 'harcamalar' ? (
         <div className="flex flex-col gap-6">
-          <AddExpenseForm
-            items={expenseItems}
-            preselectedItemId={preselectedItemId}
-            tentAssigned={!!user?.tent_id}
-            onAdded={handleExpenseAdded}
-          />
+          <SectionCard title="Yeni harcama" subtitle="Market fişi veya alışveriş tutarını kaydedin">
+            <AddExpenseForm
+              items={expenseItems}
+              preselectedItemId={preselectedItemId}
+              tentAssigned={!!user?.tent_id}
+              onAdded={handleExpenseAdded}
+            />
+          </SectionCard>
 
-          <section>
-            <h3 className="mb-3 text-lg font-semibold">Kayıtlı Harcamalar</h3>
+          <SectionCard title="Kayıtlı harcamalar">
             <ExpenseList
               expenses={expenses}
               filter={expenseFilter}
               myTentId={user?.tent_id}
               onFilterChange={setExpenseFilter}
             />
-          </section>
+          </SectionCard>
 
           <p className="text-sm text-gray-500">
             Listeden malzeme üstlendikten sonra kısayol: ortak listede{' '}
@@ -152,7 +152,7 @@ function BudgetContent() {
             <p className="text-lg text-gray-500">Bütçe hesaplanamadı.</p>
           ) : (
             <>
-              <div className="rounded-xl border-2 border-emerald-200 bg-emerald-50 p-4">
+              <div className="rounded-2xl border-2 border-emerald-200 bg-emerald-50 p-5">
                 <p className="text-lg">
                   Genel Toplam: <strong>{budget.total_cost.toFixed(2)} ₺</strong>
                 </p>

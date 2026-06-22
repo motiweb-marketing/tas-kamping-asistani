@@ -5,6 +5,8 @@ import Link from 'next/link';
 import ChecklistItemCard from '@/components/items/ChecklistItemCard';
 import ItemSearchInput from '@/components/items/ItemSearchInput';
 import SharedItemCard from '@/components/items/SharedItemCard';
+import PageHeader from '@/components/ui/PageHeader';
+import SectionCard from '@/components/ui/SectionCard';
 import { clientDuplicateCheck } from '@/lib/item-duplicates';
 import { filterItemsBySearch } from '@/lib/item-names';
 import type { ItemCategory, ItemListScope, ItemWithRelations } from '@/types';
@@ -13,22 +15,22 @@ type Tab = ItemListScope;
 
 const TABS: { id: Tab; label: string; shortLabel: string; hint: string }[] = [
   {
+    id: 'shared',
+    label: 'Kamp ihtiyaçları',
+    shortLabel: 'Kamp',
+    hint: 'Ortak alışveriş listesi — çadırınız adet seçerek üstlenir.',
+  },
+  {
     id: 'personal',
     label: 'Kişisel ihtiyaçlar',
     shortLabel: 'Kişisel',
-    hint: 'Kendiniz için getirmeniz gerekenler.',
+    hint: 'Kendi çantanız için getirmeniz gerekenler.',
   },
   {
     id: 'tent',
     label: 'Çadır ihtiyaçları',
     shortLabel: 'Çadır',
     hint: 'Çadırınızın bulundurması gereken ekipman.',
-  },
-  {
-    id: 'shared',
-    label: 'Kamp ihtiyaçları',
-    shortLabel: 'Kamp',
-    hint: 'Tüm kampın ortak listesi — çadırınız adet seçerek üstlenir.',
   },
 ];
 
@@ -119,42 +121,33 @@ export default function ItemsPage() {
   const filteredItems = filterItemsBySearch(items, search);
   const standardItems = filteredItems.filter((i) => i.is_standard);
   const foodItems = filteredItems.filter((i) => !i.is_standard);
+  const openCount =
+    tab === 'shared'
+      ? items.filter((i) => (i.remaining_count ?? 1) > 0).length
+      : items.filter((i) => !(tab === 'personal' ? i.checked : i.tent_checked)).length;
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-5">
+      <PageHeader
+        title="Kamp listeleri"
+        subtitle={activeTab.hint}
+        action={
+          <Link
+            href="/home"
+            className="rounded-xl bg-gray-100 px-3 py-2 text-sm font-semibold text-emerald-800"
+          >
+            Ana sayfa
+          </Link>
+        }
+      />
+
       {campaign && (
-        <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
-          <p className="font-semibold">{campaign.name}</p>
+        <div className="rounded-2xl border-2 border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
+          <p className="font-bold">{campaign.name}</p>
           <p>
-            {campaign.start_date} — {campaign.end_date} · Listeden üstlen → Harcama → Nöbet → Chat
+            {campaign.start_date} — {campaign.end_date}
           </p>
         </div>
-      )}
-
-      <div className="flex flex-wrap items-start justify-between gap-2">
-        <div>
-          <h2 className="text-xl font-bold">Kamp Listeleri</h2>
-          <p className="mt-1 text-sm text-gray-600">{activeTab.hint}</p>
-        </div>
-        <div className="flex shrink-0 flex-wrap gap-2">
-          <Link href="/summary" className="rounded-lg bg-gray-100 px-3 py-2 text-sm font-semibold text-emerald-800">
-            Özet
-          </Link>
-          <Link href="/menu" className="rounded-lg bg-gray-100 px-3 py-2 text-sm font-semibold text-emerald-800">
-            Menü
-          </Link>
-          <Link href="/duties" className="rounded-lg bg-gray-100 px-3 py-2 text-sm font-semibold text-emerald-800">
-            Nöbet
-          </Link>
-        </div>
-      </div>
-
-      {tab === 'shared' && (
-        <p className="rounded-lg bg-gray-50 px-3 py-2 text-xs text-gray-600">
-          <span className="font-medium text-amber-700">Turuncu</span> eksik ·{' '}
-          <span className="font-medium text-emerald-700">Yeşil</span> tamam ·{' '}
-          <span className="font-medium text-blue-700">Mavi</span> ekstra malzeme
-        </p>
       )}
 
       <div className="flex gap-2 overflow-x-auto pb-1">
@@ -163,8 +156,10 @@ export default function ItemsPage() {
             key={t.id}
             type="button"
             onClick={() => setTab(t.id)}
-            className={`shrink-0 rounded-xl px-4 py-2 text-sm font-semibold ${
-              tab === t.id ? 'bg-emerald-600 text-white' : 'bg-gray-100 text-gray-700'
+            className={`shrink-0 rounded-2xl px-4 py-2.5 text-sm font-bold transition-colors ${
+              tab === t.id
+                ? 'bg-emerald-600 text-white shadow-md'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
             }`}
           >
             <span className="sm:hidden">{t.shortLabel}</span>
@@ -172,6 +167,24 @@ export default function ItemsPage() {
           </button>
         ))}
       </div>
+
+      {!loading && items.length > 0 && (
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <p className="text-sm text-gray-600">
+            {openCount > 0 ? (
+              <span className="font-semibold text-amber-700">{openCount} eksik</span>
+            ) : (
+              <span className="font-semibold text-emerald-700">Tamamlandı</span>
+            )}
+          </p>
+          {tab === 'shared' && (
+            <div className="flex gap-2 text-xs">
+              <span className="rounded-full bg-amber-100 px-2 py-1 text-amber-800">Turuncu: eksik</span>
+              <span className="rounded-full bg-emerald-100 px-2 py-1 text-emerald-800">Yeşil: tamam</span>
+            </div>
+          )}
+        </div>
+      )}
 
       {!loading && items.length > 0 && (
         <ItemSearchInput
@@ -186,7 +199,7 @@ export default function ItemsPage() {
         <div className="flex justify-end">
           <button
             onClick={() => setShowAdd(!showAdd)}
-            className="min-h-[44px] rounded-xl bg-blue-600 px-4 text-base font-semibold text-white"
+            className="min-h-[48px] rounded-2xl bg-blue-600 px-5 text-base font-bold text-white shadow-sm"
           >
             + Ekstra Ekle
           </button>
@@ -194,7 +207,7 @@ export default function ItemsPage() {
       )}
 
       {showAdd && tab === 'shared' && (
-        <form onSubmit={handleAddItem} className="rounded-xl border-2 border-blue-200 bg-blue-50 p-4">
+        <form onSubmit={handleAddItem} className="rounded-2xl border-2 border-blue-200 bg-blue-50 p-4">
           <input
             placeholder="Malzeme adı"
             value={newItem.name}
@@ -202,7 +215,7 @@ export default function ItemsPage() {
               setNewItem({ ...newItem, name: e.target.value });
               setAddError(null);
             }}
-            className="mb-2 w-full rounded-lg border px-3 py-2 text-lg"
+            className="mb-2 w-full rounded-xl border-2 border-gray-200 px-4 py-3 text-lg"
             required
           />
           {addError && (
@@ -212,17 +225,20 @@ export default function ItemsPage() {
             placeholder="Miktar"
             value={newItem.quantity}
             onChange={(e) => setNewItem({ ...newItem, quantity: e.target.value })}
-            className="mb-2 w-full rounded-lg border px-3 py-2 text-lg"
+            className="mb-2 w-full rounded-xl border-2 border-gray-200 px-4 py-3 text-lg"
           />
           <select
             value={newItem.category}
             onChange={(e) => setNewItem({ ...newItem, category: e.target.value as ItemCategory })}
-            className="mb-3 w-full rounded-lg border px-3 py-2 text-lg"
+            className="mb-3 w-full rounded-xl border-2 border-gray-200 px-4 py-3 text-lg"
           >
             <option value="food">Yiyecek</option>
             <option value="equipment">Ekipman</option>
           </select>
-          <button type="submit" className="w-full min-h-[48px] rounded-xl bg-blue-600 text-lg font-semibold text-white">
+          <button
+            type="submit"
+            className="w-full min-h-[48px] rounded-2xl bg-blue-600 text-lg font-bold text-white"
+          >
             Ekle
           </button>
         </form>
@@ -231,46 +247,41 @@ export default function ItemsPage() {
       {loading ? (
         <p className="text-lg text-gray-500">Yükleniyor...</p>
       ) : items.length === 0 ? (
-        <div className="rounded-xl border-2 border-gray-200 bg-gray-50 p-4 text-gray-700">
+        <SectionCard title="Liste henüz hazır değil">
           {tab === 'shared' ? (
-            <>
-              <p className="font-medium">Henüz ortak liste yayınlanmadı.</p>
-              <p className="mt-2 text-sm">
-                Organizatör menü ve alışveriş listesini hazırlayınca burada görünecek. Bu arada{' '}
-                <Link href="/menu" className="font-semibold text-emerald-700 underline">
-                  menüye
-                </Link>{' '}
-                bakabilirsiniz.
-              </p>
-            </>
+            <p className="text-gray-700">
+              Organizatör menü ve alışveriş listesini hazırlayınca burada görünecek. Bu arada{' '}
+              <Link href="/menu" className="font-semibold text-emerald-700 underline">
+                menüye
+              </Link>{' '}
+              bakabilirsiniz.
+            </p>
           ) : (
-            <>
-              <p className="font-medium">Bu liste henüz hazırlanmadı.</p>
-              <p className="mt-2 text-sm">Organizatör önerilen listeleri eklediğinde burada görünür.</p>
-            </>
+            <p className="text-gray-700">
+              Organizatör önerilen listeleri eklediğinde burada görünür.
+            </p>
           )}
-        </div>
+        </SectionCard>
       ) : filteredItems.length === 0 ? (
         <p className="text-lg text-gray-500">Aramanızla eşleşen malzeme yok.</p>
       ) : tab === 'personal' || tab === 'tent' ? (
-        filteredItems.map((item) => (
-          <ChecklistItemCard
-            key={item.id}
-            item={item}
-            checked={tab === 'personal' ? !!item.checked : !!item.tent_checked}
-            onToggle={handleCheck}
-          />
-        ))
+        <div className="flex flex-col gap-3">
+          {filteredItems.map((item) => (
+            <ChecklistItemCard
+              key={item.id}
+              item={item}
+              checked={tab === 'personal' ? !!item.checked : !!item.tent_checked}
+              onToggle={handleCheck}
+            />
+          ))}
+        </div>
       ) : (
         <div className="flex flex-col gap-6">
           {standardItems.length > 0 && (
-            <section>
-              <h3 className="mb-1 text-lg font-semibold text-emerald-800">
-                Standart Malzemeler
-              </h3>
-              <p className="mb-3 text-sm text-gray-600">
-                Kişi sayısına göre otomatik hesaplanır. Adet seçerek üstlenin — hepsini tek çadır getirmek zorunda değil.
-              </p>
+            <SectionCard
+              title="Standart malzemeler"
+              subtitle="Kişi sayısına göre hesaplanır. Adet seçerek üstlenin."
+            >
               <div className="flex flex-col gap-3">
                 {standardItems.map((item) => (
                   <SharedItemCard
@@ -280,14 +291,11 @@ export default function ItemsPage() {
                   />
                 ))}
               </div>
-            </section>
+            </SectionCard>
           )}
 
           {foodItems.length > 0 && (
-            <section>
-              <h3 className="mb-3 text-lg font-semibold text-amber-800">
-                Yemek & Diğer Ortak Alışveriş
-              </h3>
+            <SectionCard title="Yemek ve diğer ortak alışveriş">
               <div className="flex flex-col gap-3">
                 {foodItems.map((item) => (
                   <SharedItemCard
@@ -297,7 +305,7 @@ export default function ItemsPage() {
                   />
                 ))}
               </div>
-            </section>
+            </SectionCard>
           )}
         </div>
       )}

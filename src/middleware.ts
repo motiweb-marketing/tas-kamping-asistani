@@ -2,13 +2,13 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getIronSession } from 'iron-session';
 import { sessionOptions, SessionData } from '@/lib/session';
 
-const protectedPaths = ['/items', '/my-tent', '/budget', '/chat', '/duties', '/menu', '/summary', '/admin'];
+const protectedPaths = ['/home', '/items', '/my-tent', '/budget', '/chat', '/duties', '/menu', '/summary', '/final-check', '/admin'];
 const platformPaths = ['/platform'];
 const authPaths = ['/login'];
 const platformAuthPaths = ['/platform/login'];
 
 function homeForRole(role?: string): string {
-  return role === 'admin' ? '/admin' : '/items';
+  return role === 'admin' ? '/admin' : '/home';
 }
 
 export async function middleware(request: NextRequest) {
@@ -41,7 +41,7 @@ export async function middleware(request: NextRequest) {
   }
 
   if (pathname.startsWith('/admin') && session.user?.role !== 'admin') {
-    return NextResponse.redirect(new URL('/items', request.url));
+    return NextResponse.redirect(new URL('/home', request.url));
   }
 
   if (pathname.startsWith('/admin') && session.platformAdmin && !session.user) {
@@ -58,6 +58,7 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
+    '/home/:path*',
     '/items/:path*',
     '/my-tent/:path*',
     '/budget/:path*',
@@ -65,6 +66,7 @@ export const config = {
     '/duties/:path*',
     '/menu/:path*',
     '/summary/:path*',
+    '/final-check/:path*',
     '/admin/:path*',
     '/login',
     '/login/:path*',

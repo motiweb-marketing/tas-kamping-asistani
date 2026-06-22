@@ -15,11 +15,11 @@ export default function TourWelcome({ onStart, onSkip }: TourWelcomeProps) {
           ⛺
         </p>
         <h2 className="mt-3 font-display text-xl font-bold text-forest-950">
-          Kamp Asistanı&apos;na hoş geldiniz
+          Kamp kurulum sihirbazı
         </h2>
         <p className="mt-2 text-sm leading-relaxed text-forest-700">
-          Kısa bir tanıtımla programın nasıl çalıştığını adım adım göstereceğiz. Kayıt sırasında
-          girdiğiniz bilgiler duruyor — her adımda ne işe yaradığını anlatacağız.
+          Bilgileri adım adım tamamlayın. Kayıt sırasında girdiğiniz kamp bilgileri duruyor — her
+          adımda ne yapmanız gerektiğini göstereceğiz.
         </p>
         <ul className="mt-4 space-y-2 text-sm text-forest-600">
           <li>✓ 6 kısa adım — yaklaşık 3 dakika</li>

@@ -31,27 +31,27 @@ export const TOUR_STEP_TIPS: Record<number, TourStepTip> = {
     bullets: ['Bilmiyorsanız 0 bırakın — sonra da ayarlayabilirsiniz', 'İsteğe bağlı: yetişkin / çocuk ayrımı'],
   },
   4: {
-    title: 'Menü planı',
-    body: 'Her gün ne yeneceğini yazın. AI ile düzenleyip katılımcılara yayınlayabilirsiniz.',
+    title: 'Menü planlaması',
+    body: 'Gün gün ne yeneceğini yazın. Hazır değilseniz şimdi atlayıp sonra hatırlatıcı ile tamamlayabilirsiniz.',
     bullets: [
       'Ham notlarınızı günlük kartlara yazın',
-      'Yayınladıktan sonra herkes menüyü görür',
       'Menüden alışveriş listesi oluşturulur',
+      'Atladıysanız sol menüden veya hatırlatıcıdan dönebilirsiniz',
     ],
   },
   5: {
-    title: 'Listeler',
-    body: 'Üç liste katmanı: kişisel ihtiyaçlar, çadır ihtiyaçları ve kamp ihtiyaçları. Önce menü, sonra AI veya elle liste, en son yayın.',
+    title: 'İhtiyaç listesi onayı',
+    body: 'AI veya elle oluşturduğunuz listeleri kontrol edin. Kamp listesini yayınlamadan katılımcılar göremez.',
     bullets: [
       '1 — Kişisel: her katılımcının kendi çantası',
       '2 — Çadır: aile/grup ekipmanı',
       '3 — Kamp: ortak alışveriş; çok çadırda adet ile üstlenme',
-      'Menü → AI liste → kişisel/çadır düzenle → kamp listesini yayınla',
+      'Taslakları inceleyin → düzenleyin → yayınlayın',
     ],
   },
   6: {
-    title: 'Giriş bilgisini paylaş',
-    body: 'Katılımcılara giriş adresini ve kendi kullanıcı adlarını gönderin. Şifreleri güvenli kanaldan iletin.',
+    title: 'Özet ve davet',
+    body: 'Kamp özetini kontrol edin, eksikleri tamamlayın ve katılımcılara giriş bilgisini gönderin.',
     bullets: [
       'Giriş adresi: sitedeki /login sayfası',
       'Her kişinin kullanıcı adı farklıdır',

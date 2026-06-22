@@ -3,8 +3,9 @@
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useCallback, useEffect, useState } from 'react';
+import AuthAlert from '@/components/auth/AuthAlert';
 import AuthButton from '@/components/auth/AuthButton';
-import { SETUP_STEPS } from '@/lib/admin-setup';
+import { canAdvanceFromStep, SETUP_STEPS, type SetupProgressInput } from '@/lib/admin-setup';
 import { TOUR_STEP_TIPS, isAdminTourDone, markAdminTourDone } from '@/lib/admin-tour';
 import KurulumStepBar from './KurulumStepBar';
 import StepFrame from './StepFrame';
@@ -24,16 +25,58 @@ function KurulumWizardInner() {
 
   const [showWelcome, setShowWelcome] = useState(false);
   const [userCount, setUserCount] = useState(0);
+  const [tentCount, setTentCount] = useState(0);
+  const [progress, setProgress] = useState<SetupProgressInput>({
+    campaignName: '',
+    hasDates: false,
+    tentCount: 0,
+    userCount: 0,
+    menuCount: 0,
+    itemCount: 0,
+    isMenuPublished: false,
+    hasPublishedItems: false,
+  });
+  const [advanceError, setAdvanceError] = useState('');
 
-  const loadUserCount = useCallback(async () => {
-    const res = await fetch('/api/users');
-    const data = await res.json();
-    setUserCount((data.users || []).length);
+  const loadProgress = useCallback(async () => {
+    const [campaignRes, usersRes, tentsRes, menusRes, itemsRes] = await Promise.all([
+      fetch('/api/campaign'),
+      fetch('/api/users'),
+      fetch('/api/tents'),
+      fetch('/api/menus'),
+      fetch('/api/items?scope=shared'),
+    ]);
+    const [campaignData, usersData, tentsData, menusData, itemsData] = await Promise.all([
+      campaignRes.json(),
+      usersRes.json(),
+      tentsRes.json(),
+      menusRes.json(),
+      itemsRes.json(),
+    ]);
+
+    const campaign = campaignData.campaign;
+    const menus = (menusData.menus || []).filter((m: { description?: string }) => m.description?.trim());
+    const items = itemsData.items || [];
+    const users = usersData.users || [];
+    const tents = tentsData.tents || [];
+
+    setUserCount(users.length);
+    setTentCount(tents.length);
+    setProgress({
+      campaignName: campaign?.name || '',
+      hasDates: !!(campaign?.start_date && campaign?.end_date),
+      tentCount: tents.length,
+      userCount: users.length,
+      menuCount: menus.length,
+      itemCount: items.length,
+      isMenuPublished: menus.length > 0,
+      hasPublishedItems: items.some((i: { is_published: boolean }) => i.is_published),
+    });
   }, []);
 
   useEffect(() => {
-    loadUserCount();
-  }, [loadUserCount, adim]);
+    loadProgress();
+  }, [loadProgress, adim]);
 
   useEffect(() => {
     const welcome = searchParams.get('welcome') === '1';
@@ -47,7 +90,20 @@ function KurulumWizardInner() {
   const tip = TOUR_STEP_TIPS[adim];
 
   function goTo(next: number) {
+    setAdvanceError('');
     router.push(`/admin/kurulum?adim=${next}`);
+  }
+
+  function handleNext() {
+    const check = canAdvanceFromStep(adim, progress);
+    if (!check.ok) {
+      setAdvanceError(check.message || 'Bu adımı tamamlayın.');
+      return;
+    }
+    if (check.message) {
+      setAdvanceError('');
+    }
+    goTo(adim + 1);
   }
 
   function skipTour() {
@@ -72,9 +128,12 @@ function KurulumWizardInner() {
 
       <header className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h1 className="font-display text-xl font-bold text-forest-950 sm:text-2xl">Program tanıtımı</h1>
+          <h1 className="font-display text-xl font-bold text-forest-950 sm:text-2xl">
+            Kamp kurulum sihirbazı
+          </h1>
           <p className="mt-1 text-sm text-forest-600">
-            Adım {adim} / {SETUP_STEPS.length} — Kamp Asistanı&apos;nın nasıl çalıştığını öğrenin.
+            Adım {adim} / {SETUP_STEPS.length} — Bilgileri adım adım tamamlayın, sonra düzenleme
+            ekranlarına geçin.
           </p>
         </div>
         <button
@@ -82,11 +141,11 @@ function KurulumWizardInner() {
           onClick={skipTour}
           className="shrink-0 self-start text-sm font-semibold text-forest-500 underline hover:text-forest-800"
         >
-          Tanıtımı atla
+          Sihirbazı atla
         </button>
       </header>
 
-      <KurulumStepBar current={adim} />
+      <KurulumStepBar current={adim} progress={progress} />
 
       <TourTip
         tip={tip}
@@ -94,19 +153,34 @@ function KurulumWizardInner() {
       />
 
       <StepFrame title={step.title} description={step.description}>
-        {adim === 1 && <Step1Kamp />}
+        {adim === 1 && <Step1Kamp onSaved={loadProgress} />}
         {adim === 2 && (
           <TentsManager
             showShareButtons={false}
             tourMode
-            onUsersChange={setUserCount}
+            onUsersChange={(count) => {
+              setUserCount(count);
+              loadProgress();
+            }}
           />
         )}
         {adim === 3 && <Step3Ucret />}
-        {adim === 4 && <Step4MenuGuide />}
+        {adim === 4 && <Step4MenuGuide onSkipped={() => goTo(5)} />}
         {adim === 5 && <Step5ListeGuide />}
         {adim === 6 && <Step6Paylas />}
       </StepFrame>
+
+      {advanceError && (
+        <div className="mt-4">
+          <AuthAlert>{advanceError}</AuthAlert>
+        </div>
+      )}
+
+      {adim === 2 && userCount < 2 && tentCount >= 1 && (
+        <p className="mt-4 text-sm text-amber-800">
+          Deneme sürümünde en az 2 kişi eklemeniz önerilir — katılımcıları şimdi ekleyin.
+        </p>
+      )}
 
       <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-between">
         {adim > 1 ? (
@@ -124,14 +198,14 @@ function KurulumWizardInner() {
         {adim < 6 ? (
           <AuthButton
             type="button"
-            onClick={() => goTo(adim + 1)}
+            onClick={handleNext}
             className="sm:ml-auto sm:w-auto sm:min-w-[140px]"
           >
             İleri →
           </AuthButton>
         ) : (
           <AuthButton type="button" onClick={finishTour} className="sm:ml-auto sm:min-w-[200px]">
-            Tanıtımı bitir — panele git
+            Kurulumu bitir — panele git
           </AuthButton>
         )}
       </div>

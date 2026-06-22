@@ -6,7 +6,7 @@ import { createServerClient } from '@/lib/supabase/server';
 type LoginMode = 'admin' | 'tent';
 
 function redirectForRole(role: string): string {
-  return role === 'admin' ? '/admin' : '/items';
+  return role === 'admin' ? '/admin' : '/home';
 }
 
 export async function POST(request: NextRequest) {

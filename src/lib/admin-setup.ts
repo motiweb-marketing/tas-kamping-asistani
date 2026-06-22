@@ -23,50 +23,51 @@ export const SETUP_STEPS: SetupStep[] = [
   {
     id: 1,
     slug: 'kamp',
-    title: 'Kamp bilgileri',
-    shortTitle: 'Kamp',
-    description: 'Kamp adı, konum ve tarihleri girin.',
+    title: 'Kamp temel bilgileri',
+    shortTitle: 'Temel',
+    description: 'Kamp adı, konum ve tarihlerini kontrol edin. Kayıt sırasında girdiğiniz bilgiler burada.',
     editHref: '/admin/kamp',
   },
   {
     id: 2,
     slug: 'cadirlar',
-    title: 'Çadırlar ve kişiler',
-    shortTitle: 'Çadırlar',
-    description: 'Çadırları ve katılımcıları ekleyin. Denemede en fazla 2 kişi.',
+    title: 'Çadırlar ve katılımcılar',
+    shortTitle: 'Kişiler',
+    description: 'Her çadırı ve katılımcıyı ekleyin. Her kişiye kullanıcı adı ve şifre verin.',
     editHref: '/admin/cadirlar',
   },
   {
     id: 3,
     slug: 'ucret',
-    title: 'Konaklama ücreti',
+    title: 'Konaklama ve bütçe ayarları',
     shortTitle: 'Ücret',
-    description: 'Tesis kişi başı ücretini belirleyin (bakiye hesabı için).',
+    description: 'Tesis kişi başı ücretini girin. Bakiye hesabı buna göre yapılır.',
     editHref: '/admin/ucret',
     optional: true,
   },
   {
     id: 4,
     slug: 'menu',
-    title: 'Menü planı',
+    title: 'Menü planlaması',
     shortTitle: 'Menü',
-    description: 'Günlük kahvaltı, öğün ve ara öğünleri yazın.',
+    description: 'Gün gün ne yeneceğini yazın. İsterseniz şimdi atlayıp sonra tamamlayabilirsiniz.',
     editHref: '/admin/menu-duzenle',
+    optional: true,
   },
   {
     id: 5,
     slug: 'liste',
-    title: 'Listeler',
-    shortTitle: 'Listeler',
-    description: 'Kişisel, çadır ve kamp ihtiyaç listelerini oluşturun, düzenleyin ve yayınlayın.',
+    title: 'İhtiyaç listesi onayı',
+    shortTitle: 'Liste',
+    description: 'AI veya elle oluşturduğunuz listeleri kontrol edin ve katılımcılara yayınlayın.',
     editHref: '/admin/listeler',
   },
   {
     id: 6,
     slug: 'paylas',
-    title: 'Giriş bilgisini paylaş',
-    shortTitle: 'Paylaş',
-    description: 'Katılımcılara giriş adresi ve kullanıcı adlarını gönderin.',
+    title: 'Özet ve davet',
+    shortTitle: 'Davet',
+    description: 'Kamp özetini kontrol edin, katılımcılara giriş bilgisini gönderin.',
     editHref: '/admin/paylas',
     optional: true,
   },
@@ -79,8 +80,35 @@ export function getStepCompletion(input: SetupProgressInput): Record<number, boo
     3: true,
     4: input.menuCount > 0,
     5: input.hasPublishedItems,
-    6: false,
+    6: input.userCount >= 1,
   };
+}
+
+export function canAdvanceFromStep(
+  stepId: number,
+  input: SetupProgressInput
+): { ok: boolean; message?: string } {
+  const completed = getStepCompletion(input);
+  switch (stepId) {
+    case 1:
+      return completed[1]
+        ? { ok: true }
+        : { ok: false, message: 'Kamp adı ve tarihleri kaydedin.' };
+    case 2:
+      return input.tentCount >= 1 && input.userCount >= 1
+        ? { ok: true }
+        : { ok: false, message: 'En az bir çadır ve bir katılımcı ekleyin.' };
+    case 5:
+      return completed[5]
+        ? { ok: true }
+        : {
+            ok: true,
+            message:
+              'Kamp listesi henüz yayınlanmadı — isterseniz devam edip sonra yayınlayabilirsiniz.',
+          };
+    default:
+      return { ok: true };
+  }
 }
 
 export function firstIncompleteStep(completed: Record<number, boolean>): number {

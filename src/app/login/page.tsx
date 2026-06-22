@@ -12,7 +12,7 @@ import AuthShell from '@/components/auth/AuthShell';
 function TentLoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const redirect = searchParams.get('redirect') || '/items';
+  const redirect = searchParams.get('redirect') || '/home';
 
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');

@@ -11,7 +11,7 @@ export default async function AdminLayout({
 }) {
   const session = await getSession();
   if (!session.isLoggedIn) redirect('/login');
-  if (session.user?.role !== 'admin') redirect('/items');
+  if (session.user?.role !== 'admin') redirect('/home');
 
   return (
     <div className="flex min-h-screen flex-col bg-sand-50 lg:flex-row">
