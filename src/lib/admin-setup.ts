@@ -73,15 +73,26 @@ export const SETUP_STEPS: SetupStep[] = [
   },
 ];
 
+/** Admin paneli / kurulum özeti için gerçek veri tamamlanma durumu */
 export function getStepCompletion(input: SetupProgressInput): Record<number, boolean> {
   return {
     1: !!input.campaignName && input.hasDates,
     2: input.tentCount >= 1 && input.userCount >= 1,
-    3: true,
+    3: false, // opsiyonel — sihirbazda ziyaret edilene kadar tamamlanmış sayılmaz
     4: input.menuCount > 0,
     5: input.hasPublishedItems,
-    6: input.userCount >= 1,
+    6: false, // davet adımı yalnızca sihirbazda geçildiğinde tamamlanır
   };
+}
+
+/** Sihirbaz adım çubuğu: yalnızca kullanıcının geçtiği adımlar tikli */
+export function getWizardStepState(
+  stepId: number,
+  current: number
+): 'done' | 'current' | 'upcoming' {
+  if (stepId < current) return 'done';
+  if (stepId === current) return 'current';
+  return 'upcoming';
 }
 
 export function canAdvanceFromStep(

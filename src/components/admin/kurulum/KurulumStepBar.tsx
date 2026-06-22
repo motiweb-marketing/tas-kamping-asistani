@@ -1,16 +1,14 @@
 'use client';
 
 import Link from 'next/link';
-import { getStepCompletion, SETUP_STEPS, type SetupProgressInput } from '@/lib/admin-setup';
+import { getWizardStepState, SETUP_STEPS } from '@/lib/admin-setup';
 
 interface KurulumStepBarProps {
   current: number;
-  progress?: SetupProgressInput;
 }
 
-export default function KurulumStepBar({ current, progress }: KurulumStepBarProps) {
+export default function KurulumStepBar({ current }: KurulumStepBarProps) {
   const currentStep = SETUP_STEPS.find((s) => s.id === current);
-  const completed = progress ? getStepCompletion(progress) : {};
 
   return (
     <div className="mb-8">
@@ -20,45 +18,65 @@ export default function KurulumStepBar({ current, progress }: KurulumStepBarProp
       <div className="overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         <ol className="flex min-w-max gap-1.5">
           {SETUP_STEPS.map((step) => {
-            const active = step.id === current;
-            const past = step.id < current;
-            const done = completed[step.id];
+            const state = getWizardStepState(step.id, current);
+            const canNavigate = step.id <= current;
+
+            const pillClass =
+              state === 'current'
+                ? 'bg-forest-800 text-white shadow-sm'
+                : state === 'done'
+                  ? 'bg-emerald-100 text-emerald-900 ring-1 ring-emerald-200'
+                  : 'bg-white text-forest-400 ring-1 ring-forest-100';
+
+            const badgeClass =
+              state === 'current'
+                ? 'bg-white text-forest-800'
+                : state === 'done'
+                  ? 'bg-emerald-600 text-white'
+                  : 'bg-forest-50 text-forest-400';
+
+            const inner = (
+              <>
+                <span
+                  className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[11px] font-bold ${badgeClass}`}
+                >
+                  {state === 'done' ? '✓' : step.id}
+                </span>
+                <span className="hidden sm:inline">{step.shortTitle}</span>
+                {step.optional && state === 'upcoming' && (
+                  <span className="hidden text-[10px] font-normal opacity-70 lg:inline">
+                    (ops.)
+                  </span>
+                )}
+              </>
+            );
 
             return (
               <li key={step.id}>
-                <Link
-                  href={`/admin/kurulum?adim=${step.id}`}
-                  aria-current={active ? 'step' : undefined}
-                  className={`flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold transition-colors ${
-                    active
-                      ? 'bg-forest-800 text-white shadow-sm'
-                      : done
-                        ? 'bg-emerald-100 text-emerald-900 ring-1 ring-emerald-200'
-                        : past
-                          ? 'bg-forest-100 text-forest-800 ring-1 ring-forest-200'
-                          : 'bg-white text-forest-500 ring-1 ring-forest-100'
-                  }`}
-                >
-                  <span
-                    className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[11px] font-bold ${
-                      active
-                        ? 'bg-white text-forest-800'
-                        : done
-                          ? 'bg-emerald-600 text-white'
-                          : past
-                            ? 'bg-forest-700 text-white'
-                            : 'bg-forest-50 text-forest-500'
-                    }`}
+                {canNavigate ? (
+                  <Link
+                    href={`/admin/kurulum?adim=${step.id}`}
+                    aria-current={state === 'current' ? 'step' : undefined}
+                    className={`flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold transition-colors ${pillClass}`}
                   >
-                    {done && !active ? '✓' : step.id}
+                    {inner}
+                  </Link>
+                ) : (
+                  <span
+                    aria-disabled
+                    className={`flex cursor-not-allowed items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold ${pillClass}`}
+                  >
+                    {inner}
                   </span>
-                  <span className="hidden sm:inline">{step.shortTitle}</span>
-                </Link>
+                )}
               </li>
             );
           })}
         </ol>
       </div>
+      <p className="mt-2 text-xs text-forest-500">
+        Adımları sırayla ilerleyin. Yeşil tik = bu adımı geçtiniz.
+      </p>
     </div>
   );
 }

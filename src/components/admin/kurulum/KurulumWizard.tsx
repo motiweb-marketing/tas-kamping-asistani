@@ -14,7 +14,6 @@ import Step3Ucret from './steps/Step3Ucret';
 import Step4MenuGuide from './steps/Step4MenuGuide';
 import Step5ListeGuide from './steps/Step5ListeGuide';
 import Step6Paylas from './steps/Step6Paylas';
-import TourTip from './TourTip';
 import TourWelcome from './TourWelcome';
 import TentsManager from '@/components/admin/TentsManager';
 
@@ -145,14 +144,14 @@ function KurulumWizardInner() {
         </button>
       </header>
 
-      <KurulumStepBar current={adim} progress={progress} />
+      <KurulumStepBar current={adim} />
 
-      <TourTip
-        tip={tip}
-        variant={adim === 2 && userCount < 2 ? 'highlight' : 'default'}
-      />
-
-      <StepFrame title={step.title} description={step.description}>
+      <StepFrame
+        title={step.title}
+        description={tip.body}
+        bullets={tip.bullets}
+        highlight={adim === 2 && userCount < 2}
+      >
         {adim === 1 && <Step1Kamp onSaved={loadProgress} />}
         {adim === 2 && (
           <TentsManager
