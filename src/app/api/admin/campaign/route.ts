@@ -1,7 +1,51 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { generateCampDutyPlan } from '@/lib/camp-plan';
+import {
+  mergeCampSetupProfile,
+  migrateLegacyMenuPrompt,
+  normalizeCampSetupProfile,
+} from '@/lib/camp-setup-profile';
 import { getSession } from '@/lib/session';
 import { createServerClient } from '@/lib/supabase/server';
+
+const CAMPAIGN_SELECT =
+  'id, name, location, start_date, end_date, menu_ai_prompt, adult_accommodation_fee, child_accommodation_fee, accommodation_use_age_pricing, accommodation_child_age_max, camp_setup_profile';
+
+export async function GET() {
+  const session = await getSession();
+  if (!session.isLoggedIn || session.user?.role !== 'admin') {
+    return NextResponse.json({ error: 'Yetkisiz' }, { status: 403 });
+  }
+
+  const supabase = createServerClient();
+  const { data, error } = await supabase
+    .from('campaigns')
+    .select(CAMPAIGN_SELECT)
+    .eq('id', session.user.campaign_id)
+    .single();
+
+  if (error || !data) {
+    return NextResponse.json({ error: error?.message || 'Kamp bulunamadı' }, { status: 404 });
+  }
+
+  let profile = normalizeCampSetupProfile(data.camp_setup_profile);
+  profile = migrateLegacyMenuPrompt(profile, data.menu_ai_prompt);
+
+  if (
+    profile.legacy_menu_prompt &&
+    JSON.stringify(data.camp_setup_profile || {}) !== JSON.stringify(profile)
+  ) {
+    await supabase
+      .from('campaigns')
+      .update({ camp_setup_profile: profile })
+      .eq('id', session.user.campaign_id);
+  }
+
+  return NextResponse.json({
+    campaign: { ...data, camp_setup_profile: profile },
+    camp_setup_profile: profile,
+  });
+}
 
 export async function PATCH(request: NextRequest) {
   const session = await getSession();
@@ -20,12 +64,13 @@ export async function PATCH(request: NextRequest) {
     child_accommodation_fee,
     accommodation_use_age_pricing,
     accommodation_child_age_max,
+    camp_setup_profile,
   } = body;
 
   const supabase = createServerClient();
   const campaignId = session.user.campaign_id;
 
-  const updates: Record<string, string | number | boolean> = {};
+  const updates: Record<string, string | number | boolean | object> = {};
   if (start_date) updates.start_date = start_date;
   if (end_date) updates.end_date = end_date;
   if (name) updates.name = name;
@@ -60,6 +105,23 @@ export async function PATCH(request: NextRequest) {
     updates.accommodation_child_age_max = ageMax;
   }
 
+  if (camp_setup_profile !== undefined) {
+    const { data: existing } = await supabase
+      .from('campaigns')
+      .select('camp_setup_profile, menu_ai_prompt')
+      .eq('id', campaignId)
+      .single();
+
+    const current = migrateLegacyMenuPrompt(
+      normalizeCampSetupProfile(existing?.camp_setup_profile),
+      existing?.menu_ai_prompt
+    );
+    updates.camp_setup_profile = mergeCampSetupProfile(
+      current,
+      camp_setup_profile as Parameters<typeof mergeCampSetupProfile>[1]
+    );
+  }
+
   if (!Object.keys(updates).length) {
     return NextResponse.json({ error: 'Güncellenecek alan yok' }, { status: 400 });
   }
@@ -80,9 +142,7 @@ export async function PATCH(request: NextRequest) {
     .from('campaigns')
     .update(updates)
     .eq('id', campaignId)
-    .select(
-      'id, name, location, start_date, end_date, menu_ai_prompt, adult_accommodation_fee, child_accommodation_fee, accommodation_use_age_pricing, accommodation_child_age_max'
-    )
+    .select(CAMPAIGN_SELECT)
     .single();
 
   if (error || !campaign) {

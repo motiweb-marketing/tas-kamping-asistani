@@ -27,8 +27,8 @@ export default function MyTentPage() {
     const [meRes, sharedRes, tentRes, personalRes, dutiesRes] = await Promise.all([
       fetch('/api/auth/me'),
       fetch('/api/items?scope=shared'),
-      fetch('/api/items?scope=tent&recommendations=true'),
-      fetch('/api/items?scope=personal&recommendations=true'),
+      fetch('/api/items?scope=tent&participant=true'),
+      fetch('/api/items?scope=personal&participant=true'),
       fetch('/api/duties'),
     ]);
 

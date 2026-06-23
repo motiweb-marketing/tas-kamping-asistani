@@ -13,10 +13,13 @@ import { tentCapacity, type CampaignLimits } from '@/lib/campaign-limits';
 import { SITE } from '@/lib/site-config';
 import type { SafeUser, Tent } from '@/types';
 
-export function copyLoginInfo(username: string) {
+export function copyLoginInfo(username: string, campaignId?: string) {
+  const loginUrl = campaignId
+    ? `${SITE.url}/login?kamp=${campaignId}`
+    : `${SITE.url}/login`;
   const text = [
     `${SITE.name} — Kamp girişi`,
-    `Adres: ${SITE.url}/login`,
+    `Adres: ${loginUrl}`,
     `Kullanıcı adı: ${username}`,
     'Şifre: (organizatör tarafından verildi)',
   ].join('\n');

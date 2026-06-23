@@ -43,6 +43,13 @@ export default function ChecklistItemCard({
         {item.notes && (
           <p className="mt-1 text-sm text-gray-500">{item.notes}</p>
         )}
+        {item.is_extra && item.added_by_user && (
+          <p className="mt-2">
+            <span className="inline-flex items-center rounded-full bg-purple-100 px-2.5 py-0.5 text-xs font-semibold text-purple-800">
+              ✨ {item.added_by_user.name} ekledi
+            </span>
+          </p>
+        )}
       </div>
     </label>
   );

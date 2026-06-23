@@ -21,6 +21,7 @@ interface PromptParams {
   campDays: number;
   menuDetails: MenuSummaryLine[];
   context: ListGenerationContext;
+  extraPrompt?: string;
 }
 
 export interface AiGeneratedItemStructured extends AiGeneratedItem {
@@ -67,6 +68,7 @@ ${menuText}
 
 GRUP TERCİHLERİ:
 ${contextBlock}
+${params.extraPrompt ? `\n${params.extraPrompt}\n` : ''}
 
 GÖREV: Bu menü için ORTAK KAMP ALIŞVERİŞ listesi oluştur. Eksiksiz, milimetrik, uygulanabilir olmalı.
 
@@ -91,6 +93,7 @@ KESİNLİKLE DAHİL ETME (sistemde zaten var):
 - Tabak, bardak, çay bardağı, çatal, kaşık, bıçak, peçete (standart liste)
 - Deniz ayakkabısı, güneş kremi, şapka, mayo, kişisel ilaçlar (kişisel liste)
 - Çoklu priz, çadır ışığı, sinek spreyi, uyku tulumu (çadır listesi)
+- İçme suyu ve çay suyu (damacana) — sistem ayrı ekler, sen EKLEME
 
 JSON FORMATI — her öğe:
 {
@@ -261,6 +264,32 @@ export async function callOpenRouterMenuPublish(
   }
 
   return JSON.parse(jsonMatch[0]) as RawDayMenuInput[];
+}
+
+export interface AiClarification {
+  id: string;
+  question: string;
+  options?: string[];
+}
+
+export async function callOpenRouterClarifications(
+  summary: string,
+  apiKey: string
+): Promise<AiClarification[]> {
+  const systemPrompt = `Sen kamp organizasyon asistanısın. Verilen özet belirsiz veya eksikse en fazla 2 kısa soru sor.
+Her soruda 2-4 seçenek ver. Her şey netse boş dizi döndür.
+Yanıt SADECE JSON: {"clarifications":[{"id":"q1","question":"...","options":["A","B"]}]}`;
+
+  const content = await callOpenRouterRaw(systemPrompt, summary, apiKey);
+  const jsonMatch = content.match(/\{[\s\S]*\}/);
+  if (!jsonMatch) return [];
+
+  try {
+    const parsed = JSON.parse(jsonMatch[0]) as { clarifications?: AiClarification[] };
+    return (parsed.clarifications || []).slice(0, 2);
+  } catch {
+    return [];
+  }
 }
 
 export { computeNeededCountFromQuantity };

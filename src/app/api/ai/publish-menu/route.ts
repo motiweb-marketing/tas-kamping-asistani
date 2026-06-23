@@ -6,6 +6,11 @@ import {
   callOpenRouterMenuPublish,
   type RawDayMenuInput,
 } from '@/lib/openrouter';
+import {
+  buildMenuPromptFromProfile,
+  migrateLegacyMenuPrompt,
+  normalizeCampSetupProfile,
+} from '@/lib/camp-setup-profile';
 import { getPlatformOpenRouterKey } from '@/lib/platform-settings';
 import { resolveOpenRouterKeyFromRow } from '@/lib/resolve-openrouter-key';
 import { getSession } from '@/lib/session';
@@ -23,7 +28,9 @@ export async function POST() {
   const [campaignRes, menusRes] = await Promise.all([
     supabase
       .from('campaigns')
-      .select('openrouter_api_key, use_platform_ai, plan_tier, menu_ai_prompt, start_date, end_date')
+      .select(
+        'openrouter_api_key, use_platform_ai, plan_tier, menu_ai_prompt, start_date, end_date, camp_setup_profile'
+      )
       .eq('id', campaignId)
       .single(),
     supabase.from('menus').select('id, day, meal_type, description').eq('campaign_id', campaignId),
@@ -77,7 +84,12 @@ export async function POST() {
   }
 
   try {
-    const prompt = buildMenuPublishPrompt(rawDays, campaign.menu_ai_prompt || '');
+    const profile = migrateLegacyMenuPrompt(
+      normalizeCampSetupProfile(campaign?.camp_setup_profile),
+      campaign?.menu_ai_prompt
+    );
+    const adminInstructions = buildMenuPromptFromProfile(profile);
+    const prompt = buildMenuPublishPrompt(rawDays, adminInstructions);
     const aiDays = await callOpenRouterMenuPublish(prompt, apiKey);
 
     const merged = cards.map((card) => {

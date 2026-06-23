@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import CoachBubble from '@/components/onboarding/CoachBubble';
 import {
   LEADER_SCRIPT,
@@ -11,6 +11,7 @@ import {
 } from '@/lib/admin-tour';
 
 export default function LeaderHomeWelcome() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const [visible, setVisible] = useState(false);
 
@@ -36,7 +37,10 @@ export default function LeaderHomeWelcome() {
         title={intro.title}
         body={intro.body}
         cta="Admin paneline geç"
-        onNext={() => setVisible(false)}
+        onNext={() => {
+          setVisible(false);
+          router.push('/admin/kurulum?adim=1&leader=1');
+        }}
         onSkip={() => {
           completeLeaderOnboarding();
           setVisible(false);

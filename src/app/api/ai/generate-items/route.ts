@@ -6,6 +6,7 @@ import { createServerClient } from '@/lib/supabase/server';
 import {
   buildSystemPrompt,
   callOpenRouter,
+  callOpenRouterClarifications,
   computeNeededCountFromQuantity,
 } from '@/lib/openrouter';
 import { getPlatformOpenRouterKey } from '@/lib/platform-settings';
@@ -15,10 +16,18 @@ import {
   type ListGenerationContext,
 } from '@/lib/list-generation-context';
 import {
+  buildMenuPromptFromProfile,
+  migrateLegacyMenuPrompt,
+  normalizeCampSetupProfile,
+  profileToListContext,
+} from '@/lib/camp-setup-profile';
+import { filterAiItemsWithoutWater, waterItemsToAiRows } from '@/lib/inject-water-items';
+import {
   rebuildSharedSectionsFromHints,
   resolveSectionId,
 } from '@/lib/list-sections';
 import { snapshotHeadcount } from '@/lib/sync-ai-list-quantities';
+import { computeWaterPlan, formatWaterPlanForPrompt } from '@/lib/water-plan';
 
 const MIN_PARTICIPANTS = 2;
 
@@ -39,13 +48,41 @@ export async function POST(request: NextRequest) {
   const campaignId = session.user.campaign_id;
   const supabase = createServerClient();
 
-  let context: ListGenerationContext;
+  let body: {
+    phase?: 'preview' | 'finalize';
+    context?: Partial<ListGenerationContext>;
+    clarification_answers?: Record<string, string>;
+  };
   try {
-    const body = await request.json();
-    context = normalizeListGenerationContext(body?.context);
+    body = await request.json();
   } catch {
     return NextResponse.json({ error: 'Geçersiz istek gövdesi' }, { status: 400 });
   }
+
+  const phase = body.phase || 'finalize';
+
+  const [campaignRes, usersRes, tentsRes, menusRes] = await Promise.all([
+    supabase
+      .from('campaigns')
+      .select(
+        'openrouter_api_key, use_platform_ai, plan_tier, start_date, end_date, camp_setup_profile, menu_ai_prompt'
+      )
+      .eq('id', campaignId)
+      .single(),
+    supabase.from('users').select('age, tent_id').eq('campaign_id', campaignId),
+    supabase.from('tents').select('id').eq('campaign_id', campaignId),
+    supabase.from('menus').select('id, day, meal_type, description').eq('campaign_id', campaignId),
+  ]);
+
+  const profile = migrateLegacyMenuPrompt(
+    normalizeCampSetupProfile(campaignRes.data?.camp_setup_profile),
+    campaignRes.data?.menu_ai_prompt
+  );
+
+  const context = normalizeListGenerationContext({
+    ...profileToListContext(profile),
+    ...body.context,
+  });
 
   if (!context.headcount_confirmed) {
     return NextResponse.json(
@@ -53,17 +90,6 @@ export async function POST(request: NextRequest) {
       { status: 400 }
     );
   }
-
-  const [campaignRes, usersRes, tentsRes, menusRes] = await Promise.all([
-    supabase
-      .from('campaigns')
-      .select('openrouter_api_key, use_platform_ai, plan_tier, start_date, end_date')
-      .eq('id', campaignId)
-      .single(),
-    supabase.from('users').select('age, tent_id').eq('campaign_id', campaignId),
-    supabase.from('tents').select('id').eq('campaign_id', campaignId),
-    supabase.from('menus').select('id, day, meal_type, description').eq('campaign_id', campaignId),
-  ]);
 
   const apiKey = resolveOpenRouterKeyFromRow(
     campaignRes.data,
@@ -125,6 +151,28 @@ export async function POST(request: NextRequest) {
     campaignRes.data?.end_date || ''
   );
 
+  const waterPlan = computeWaterPlan(profile.water, headcount.total, campDays);
+  const extraPrompt = [
+    buildMenuPromptFromProfile(profile),
+    formatWaterPlanForPrompt(profile, headcount.total, campDays),
+    body.clarification_answers
+      ? `Kullanıcı netleştirmeleri: ${JSON.stringify(body.clarification_answers)}`
+      : '',
+  ]
+    .filter(Boolean)
+    .join('\n\n');
+
+  if (phase === 'preview') {
+    const clarifications = await callOpenRouterClarifications(
+      `Kamp: ${headcount.total} kişi, ${campDays} gün. Menü öğesi: ${menus.length}. Su özeti: ${waterPlan.summary}`,
+      apiKey
+    );
+    return NextResponse.json({
+      clarifications,
+      water_summary: waterPlan.summary,
+    });
+  }
+
   const systemPrompt = buildSystemPrompt({
     totalPeople: headcount.total,
     adultCount: headcount.adults,
@@ -133,6 +181,7 @@ export async function POST(request: NextRequest) {
     campDays,
     menuDetails: menus,
     context,
+    extraPrompt,
   });
 
   try {
@@ -144,7 +193,11 @@ export async function POST(request: NextRequest) {
       .eq('is_published', false)
       .eq('is_extra', false);
 
-    const aiItems = await callOpenRouter(systemPrompt, apiKey);
+    const aiItemsRaw = await callOpenRouter(systemPrompt, apiKey);
+    const aiItems = [
+      ...filterAiItemsWithoutWater(aiItemsRaw),
+      ...waterItemsToAiRows(waterPlan.items),
+    ];
 
     const sectionMap = await rebuildSharedSectionsFromHints(
       supabase,
@@ -209,6 +262,7 @@ export async function POST(request: NextRequest) {
       .from('campaigns')
       .update({
         list_generation_context: context,
+        camp_setup_profile: profile,
         list_baseline_headcount: headcount.total,
         list_baseline_adults: headcount.adults,
         list_baseline_children: headcount.children,
@@ -221,6 +275,7 @@ export async function POST(request: NextRequest) {
       count: data?.length || 0,
       headcount: headcount.total,
       sectionCount: sectionMap.size,
+      water_summary: waterPlan.summary,
       redirectTo: '/admin/listeler/kamp',
     });
   } catch (err) {

@@ -9,6 +9,7 @@ import { markCredentialsShared } from '@/components/admin/SetupChecklist';
 import AuthButton from '@/components/auth/AuthButton';
 
 interface SetupSummary {
+  id: string;
   name: string;
   location: string;
   start_date: string;
@@ -36,6 +37,7 @@ export default function Step6Paylas() {
       const items = itemsData.items || [];
       if (campaign) {
         setSummary({
+          id: campaign.id,
           name: campaign.name,
           location: campaign.location,
           start_date: campaign.start_date,
@@ -50,9 +52,12 @@ export default function Step6Paylas() {
   }, []);
 
   function copyAll() {
+    const loginUrl = summary?.id
+      ? `${SITE.url}/login?kamp=${summary.id}`
+      : `${SITE.url}/login`;
     const lines = [
       `${SITE.name} — Kamp girişi`,
-      `Adres: ${SITE.url}/login`,
+      `Adres: ${loginUrl}`,
       '',
       ...users.map((u) => `• ${u.name}: kullanıcı adı "${u.username}"`),
       '',
@@ -121,7 +126,9 @@ export default function Step6Paylas() {
       </AuthButton>
       <div className="rounded-xl border border-forest-100 bg-forest-50 p-4 text-sm text-forest-800">
         <p className="font-semibold">Giriş adresi</p>
-        <p className="mt-1 font-mono text-xs">{SITE.url}/login</p>
+        <p className="mt-1 font-mono text-xs break-all">
+          {summary?.id ? `${SITE.url}/login?kamp=${summary.id}` : `${SITE.url}/login`}
+        </p>
       </div>
       <ul className="space-y-2">
         {users.map((u) => (
@@ -134,7 +141,7 @@ export default function Step6Paylas() {
             </span>
             <button
               type="button"
-              onClick={() => copyLoginInfo(u.username)}
+              onClick={() => copyLoginInfo(u.username, summary?.id)}
               className="shrink-0 rounded-lg bg-forest-800 px-3 py-1.5 text-xs font-semibold text-white"
             >
               Kopyala

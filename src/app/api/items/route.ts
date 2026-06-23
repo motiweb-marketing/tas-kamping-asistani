@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { assertNoDuplicateItem } from '@/lib/item-duplicates';
+import { assertNoDuplicateItem, assertNoDuplicateParticipantItem } from '@/lib/item-duplicates';
 import { enrichItemWithClaims, normalizeClaims } from '@/lib/item-claims';
 import { ensureCampaignRecommendations } from '@/lib/recommendations';
 import { ensureListSections } from '@/lib/list-sections';
@@ -38,6 +38,7 @@ export async function GET(request: NextRequest) {
   const tentIdFilter = searchParams.get('tent_id');
   const scope = searchParams.get('scope') as ItemListScope | 'all' | null;
   const recommendationsOnly = searchParams.get('recommendations') === 'true';
+  const participantView = searchParams.get('participant') === 'true';
   const excludeStandard = searchParams.get('exclude_standard') === 'true';
 
   const supabase = createServerClient();
@@ -77,6 +78,16 @@ export async function GET(request: NextRequest) {
 
   if (recommendationsOnly) {
     query = query.eq('is_recommendation', true);
+  } else if (participantView && scope === 'personal') {
+    query = query.or(`is_recommendation.eq.true,added_by.eq.${session.user.id}`);
+  } else if (participantView && scope === 'tent') {
+    if (session.user.tent_id) {
+      query = query.or(
+        `is_recommendation.eq.true,and(assigned_tent_id.eq.${session.user.tent_id},is_recommendation.eq.false)`
+      );
+    } else {
+      query = query.eq('is_recommendation', true);
+    }
   }
 
   if (excludeStandard) {
@@ -170,28 +181,50 @@ export async function POST(request: NextRequest) {
   const isAdminRecommendation =
     session.user.role === 'admin' && is_recommendation && list_scope !== 'shared';
 
-  if (list_scope !== 'shared' && !isAdminRecommendation) {
+  const isParticipantPersonalOrTent =
+    !is_recommendation &&
+    (list_scope === 'personal' || list_scope === 'tent') &&
+    session.user.role !== 'admin';
+
+  if (list_scope !== 'shared' && !isAdminRecommendation && !isParticipantPersonalOrTent) {
     return NextResponse.json({ error: 'Yalnızca ortak listeye ekleme yapılabilir' }, { status: 403 });
+  }
+
+  if (list_scope === 'tent' && isParticipantPersonalOrTent && !session.user.tent_id) {
+    return NextResponse.json({ error: 'Çadır atanmadan çadır listesine ekleyemezsiniz' }, { status: 400 });
   }
 
   const supabase = createServerClient();
   const scope = list_scope as ItemListScope;
 
-  const duplicate = await assertNoDuplicateItem(
-    supabase,
-    session.user.campaign_id,
-    name,
-    scope
-  );
+  const duplicate = isParticipantPersonalOrTent
+    ? await assertNoDuplicateParticipantItem(
+        supabase,
+        session.user.campaign_id,
+        name,
+        scope as 'personal' | 'tent',
+        session.user.id,
+        session.user.tent_id
+      )
+    : await assertNoDuplicateItem(supabase, session.user.campaign_id, name, scope);
   if (duplicate) {
     return NextResponse.json({ error: duplicate.error }, { status: 409 });
   }
 
   let resolvedSectionId = section_id || null;
-  if (!resolvedSectionId && session.user.role === 'admin') {
+  if (!resolvedSectionId) {
     const { getOrCreateDefaultSection } = await import('@/lib/list-sections');
-    resolvedSectionId = await getOrCreateDefaultSection(supabase, session.user.campaign_id, scope);
+    resolvedSectionId = await getOrCreateDefaultSection(
+      supabase,
+      session.user.campaign_id,
+      scope
+    );
   }
+
+  const isUserExtra =
+    list_scope === 'shared'
+      ? !is_recommendation
+      : isParticipantPersonalOrTent;
 
   const { data: item, error } = await supabase
     .from('items')
@@ -206,12 +239,16 @@ export async function POST(request: NextRequest) {
       disposition,
       notes: notes || null,
       section_id: resolvedSectionId,
-      is_extra: list_scope === 'shared' && !is_recommendation,
-      is_published: isAdminRecommendation || list_scope === 'shared',
+      is_extra: isUserExtra,
+      is_published: isAdminRecommendation || list_scope === 'shared' || isParticipantPersonalOrTent,
       is_recommendation: !!is_recommendation,
       is_standard: false,
       price,
       added_by: session.user.id,
+      assigned_tent_id:
+        list_scope === 'tent' && isParticipantPersonalOrTent
+          ? session.user.tent_id
+          : null,
     })
     .select()
     .single();

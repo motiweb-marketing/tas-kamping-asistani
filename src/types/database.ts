@@ -39,6 +39,7 @@ export interface Campaign {
   list_baseline_adults?: number | null;
   list_baseline_children?: number | null;
   list_generated_at?: string | null;
+  camp_setup_profile?: Record<string, unknown> | null;
   created_at: string;
 }
 

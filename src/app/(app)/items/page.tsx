@@ -57,7 +57,7 @@ export default function ItemsPage() {
 
   const loadItems = useCallback(async (scope: Tab) => {
     setLoading(true);
-    const extra = scope !== 'shared' ? '&recommendations=true' : '';
+    const extra = scope !== 'shared' ? '&participant=true' : '';
     const res = await fetch(`/api/items?scope=${scope}${extra}`);
     const data = await res.json();
     setItems(data.items || []);
@@ -81,6 +81,8 @@ export default function ItemsPage() {
 
   useEffect(() => {
     setSearch('');
+    setShowAdd(false);
+    setAddError(null);
     loadItems(tab);
   }, [tab, loadItems]);
 
@@ -106,7 +108,11 @@ export default function ItemsPage() {
     const res = await fetch('/api/items', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ...newItem, list_scope: 'shared' }),
+      body: JSON.stringify({
+        ...newItem,
+        list_scope: tab,
+        category: tab === 'shared' ? newItem.category : 'equipment',
+      }),
     });
     const data = await res.json().catch(() => ({}));
     if (res.ok) {
@@ -124,6 +130,9 @@ export default function ItemsPage() {
   const nonStandardItems =
     tab === 'shared' ? filteredItems.filter((i) => !i.is_standard) : filteredItems;
   const sectionGroups = groupItemsBySection(nonStandardItems);
+  const addButtonLabel =
+    tab === 'shared' ? '+ Ekstra Ekle' : tab === 'personal' ? '+ Kişisel Ekle' : '+ Çadıra Ekle';
+
   const openCount =
     tab === 'shared'
       ? items.filter((i) => (i.remaining_count ?? 1) > 0).length
@@ -204,13 +213,37 @@ export default function ItemsPage() {
             onClick={() => setShowAdd(!showAdd)}
             className="min-h-[48px] rounded-2xl bg-blue-600 px-5 text-base font-bold text-white shadow-sm"
           >
-            + Ekstra Ekle
+            {addButtonLabel}
           </button>
         </div>
       )}
 
-      {showAdd && tab === 'shared' && (
-        <form onSubmit={handleAddItem} className="rounded-2xl border-2 border-blue-200 bg-blue-50 p-4">
+      {(tab === 'personal' || tab === 'tent') && (
+        <div className="flex justify-end">
+          <button
+            type="button"
+            onClick={() => setShowAdd(!showAdd)}
+            className="min-h-[48px] rounded-2xl bg-emerald-600 px-5 text-base font-bold text-white shadow-sm"
+          >
+            {addButtonLabel}
+          </button>
+        </div>
+      )}
+
+      {showAdd && (
+        <form
+          onSubmit={handleAddItem}
+          className={`rounded-2xl border-2 p-4 ${
+            tab === 'shared' ? 'border-blue-200 bg-blue-50' : 'border-emerald-200 bg-emerald-50'
+          }`}
+        >
+          <p className="mb-3 text-sm font-semibold text-gray-800">
+            {tab === 'personal'
+              ? 'Sadece sizin listenizde görünür.'
+              : tab === 'tent'
+                ? 'Sadece çadırınızın listesinde görünür.'
+                : 'Tüm kampın ortak listesine eklenir.'}
+          </p>
           <input
             placeholder="Malzeme adı"
             value={newItem.name}
@@ -230,17 +263,21 @@ export default function ItemsPage() {
             onChange={(e) => setNewItem({ ...newItem, quantity: e.target.value })}
             className="mb-2 w-full rounded-xl border-2 border-gray-200 px-4 py-3 text-lg"
           />
-          <select
-            value={newItem.category}
-            onChange={(e) => setNewItem({ ...newItem, category: e.target.value as ItemCategory })}
-            className="mb-3 w-full rounded-xl border-2 border-gray-200 px-4 py-3 text-lg"
-          >
-            <option value="food">Yiyecek</option>
-            <option value="equipment">Ekipman</option>
-          </select>
+          {tab === 'shared' && (
+            <select
+              value={newItem.category}
+              onChange={(e) => setNewItem({ ...newItem, category: e.target.value as ItemCategory })}
+              className="mb-3 w-full rounded-xl border-2 border-gray-200 px-4 py-3 text-lg"
+            >
+              <option value="food">Yiyecek</option>
+              <option value="equipment">Ekipman</option>
+            </select>
+          )}
           <button
             type="submit"
-            className="w-full min-h-[48px] rounded-2xl bg-blue-600 text-lg font-bold text-white"
+            className={`w-full min-h-[48px] rounded-2xl text-lg font-bold text-white ${
+              tab === 'shared' ? 'bg-blue-600' : 'bg-emerald-600'
+            }`}
           >
             Ekle
           </button>
@@ -261,7 +298,8 @@ export default function ItemsPage() {
             </p>
           ) : (
             <p className="text-gray-700">
-              Organizatör önerilen listeleri eklediğinde burada görünür.
+              Organizatör önerileri burada görünür. Kendi ihtiyaçlarınızı{' '}
+              <strong>+ Kişisel Ekle</strong> veya <strong>+ Çadıra Ekle</strong> ile ekleyebilirsiniz.
             </p>
           )}
         </SectionCard>

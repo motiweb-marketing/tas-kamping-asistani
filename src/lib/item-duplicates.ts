@@ -52,6 +52,46 @@ export async function assertNoDuplicateItem(
   return null;
 }
 
+/** Katılımcının kişisel veya çadır listesine ekleme — öneriler + kendi maddeleri içinde tekilleştir */
+export async function assertNoDuplicateParticipantItem(
+  supabase: SupabaseClient,
+  campaignId: string,
+  name: string,
+  listScope: 'personal' | 'tent',
+  userId: string,
+  tentId: string | null,
+  excludeId?: string
+): Promise<{ error: string } | null> {
+  const normalized = normalizeItemName(name);
+  if (!normalized) return null;
+
+  let query = supabase
+    .from('items')
+    .select('id, name, is_recommendation, added_by, assigned_tent_id')
+    .eq('campaign_id', campaignId)
+    .eq('list_scope', listScope);
+
+  if (listScope === 'personal') {
+    query = query.or(`is_recommendation.eq.true,added_by.eq.${userId}`);
+  } else if (tentId) {
+    query = query.or(
+      `is_recommendation.eq.true,and(assigned_tent_id.eq.${tentId},is_recommendation.eq.false)`
+    );
+  } else {
+    query = query.eq('is_recommendation', true);
+  }
+
+  const { data, error } = await query;
+  if (error) throw new Error(error.message);
+
+  const duplicate = (data || []).find(
+    (item) =>
+      item.id !== excludeId && normalizeItemName(item.name) === normalized
+  );
+
+  return duplicate ? { error: duplicateItemError(duplicate.name) } : null;
+}
+
 /** İstemci tarafı hızlı kontrol */
 export function clientDuplicateCheck(
   name: string,

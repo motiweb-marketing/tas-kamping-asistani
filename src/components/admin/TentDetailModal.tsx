@@ -341,7 +341,7 @@ export default function TentDetailModal({
                       {showShareButtons && (
                         <button
                           type="button"
-                          onClick={() => copyLoginInfo(u.username)}
+                          onClick={() => copyLoginInfo(u.username, u.campaign_id)}
                           className="rounded-lg bg-white px-3 py-1.5 text-xs font-semibold text-forest-800 ring-1 ring-forest-200"
                         >
                           Kopyala
