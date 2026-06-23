@@ -5,6 +5,7 @@ import { parseUsersFile } from '@/lib/user-import';
 import { formatPersonName, formatTitleCase } from '@/lib/format';
 import { requirePlatformAdmin } from '@/lib/platform-auth';
 import { syncAllListQuantities } from '@/lib/sync-ai-list-quantities';
+import { normalizeUsername } from '@/lib/user-validation';
 import { createServerClient } from '@/lib/supabase/server';
 
 export async function POST(
@@ -106,11 +107,18 @@ export async function POST(
       continue;
     }
 
+    const cleanUsername = normalizeUsername(row.username);
+    if (!cleanUsername) {
+      results.errors.push(`${row.username}: geçersiz kullanıcı adı`);
+      results.skipped++;
+      continue;
+    }
+
     const { data: dup } = await supabase
       .from('users')
       .select('id')
       .eq('campaign_id', campaignId)
-      .eq('username', row.username)
+      .eq('username', cleanUsername)
       .maybeSingle();
 
     if (dup) {
@@ -125,7 +133,7 @@ export async function POST(
       tent_id: tent.id,
       name: formatPersonName(row.name),
       age: row.age,
-      username: row.username.trim(),
+      username: cleanUsername,
       password_hash,
       role: 'user',
     });

@@ -85,6 +85,7 @@ async function main() {
     '014_list_generation_scaling.sql',
     '015_list_sections.sql',
     '016_camp_setup_profile.sql',
+    '017_normalize_usernames.sql',
   ];
 
   for (const file of files) {

@@ -94,7 +94,7 @@ function parseTable(rows: unknown[][]): { rows: UserImportRow[]; errors: string[
     const row: UserImportRow = {
       name: get('name'),
       age,
-      username: get('username'),
+      username: get('username').replace(/^@+/, '').trim().toLowerCase(),
       password: get('password'),
       tent_name: get('tent_name'),
     };

@@ -1,7 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 export function normalizeUsername(username: string): string {
-  return username.trim().toLowerCase();
+  return username.trim().replace(/^@+/, '').toLowerCase();
 }
 
 export function mapUserDbError(message: string): string {

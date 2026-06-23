@@ -50,9 +50,14 @@ export async function POST(request: NextRequest) {
     }
 
     const loginUsername = normalizeUsername(String(username));
+    const passwordInput = String(password).trim();
+    if (!loginUsername || !passwordInput) {
+      return NextResponse.json({ error: 'Kullanıcı adı ve şifre gerekli' }, { status: 400 });
+    }
+
     const supabase = createServerClient();
 
-    const { data: users, error } = await supabase
+    const { data: rawUsers, error } = await supabase
       .from('users')
       .select(
         `
@@ -60,9 +65,13 @@ export async function POST(request: NextRequest) {
         campaigns!inner(id, name, start_date, end_date)
       `
       )
-      .eq('username', loginUsername);
+      .or(`username.ilike.${loginUsername},username.ilike.@${loginUsername}`);
 
-    if (error || !users?.length) {
+    const users = (rawUsers || []).filter(
+      (u) => normalizeUsername(u.username) === loginUsername
+    );
+
+    if (error || !users.length) {
       return NextResponse.json({ error: 'Kullanıcı adı veya şifre hatalı' }, { status: 401 });
     }
 
@@ -73,7 +82,7 @@ export async function POST(request: NextRequest) {
       if (!matched) {
         return NextResponse.json({ error: 'Kullanıcı adı veya şifre hatalı' }, { status: 401 });
       }
-      const valid = await verifyPassword(password, matched.password_hash);
+      const valid = await verifyPassword(passwordInput, matched.password_hash);
       if (!valid) {
         return NextResponse.json({ error: 'Kullanıcı adı veya şifre hatalı' }, { status: 401 });
       }
@@ -82,7 +91,7 @@ export async function POST(request: NextRequest) {
 
     const passwordMatches: UserRow[] = [];
     for (const row of rows) {
-      if (await verifyPassword(password, row.password_hash)) {
+      if (await verifyPassword(passwordInput, row.password_hash)) {
         passwordMatches.push(row);
       }
     }
