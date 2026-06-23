@@ -1,5 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { hashPassword } from '@/lib/auth';
+import {
+  countUsersInTent,
+  getCampaignLimits,
+  limitErrorMessage,
+  tentCapacity,
+} from '@/lib/campaign-limits';
 import { formatPersonName } from '@/lib/format';
 import { syncAllListQuantities } from '@/lib/sync-ai-list-quantities';
 import { isUsernameTaken, mapUserDbError, normalizeUsername } from '@/lib/user-validation';
@@ -28,7 +34,40 @@ export async function PATCH(
     updates.name = name;
   }
   if (body.age !== undefined) updates.age = Number(body.age);
-  if (body.tent_id !== undefined) updates.tent_id = body.tent_id || null;
+  if (body.tent_id !== undefined) {
+    const newTentId = body.tent_id || null;
+    if (newTentId) {
+      const limits = await getCampaignLimits(supabase, campaignId);
+      const { data: tent } = await supabase
+        .from('tents')
+        .select('max_capacity')
+        .eq('id', newTentId)
+        .eq('campaign_id', campaignId)
+        .single();
+
+      if (!tent) {
+        return NextResponse.json({ error: 'Çadır bulunamadı' }, { status: 404 });
+      }
+
+      const cap = tentCapacity(tent, limits.plan_tier);
+      const inTent = await countUsersInTent(supabase, newTentId);
+      const { data: currentUser } = await supabase
+        .from('users')
+        .select('tent_id')
+        .eq('id', params.id)
+        .eq('campaign_id', campaignId)
+        .single();
+
+      const alreadyInTarget = currentUser?.tent_id === newTentId;
+      if (!alreadyInTarget && inTent >= cap) {
+        return NextResponse.json(
+          { error: limitErrorMessage('tent_full', limits, cap) },
+          { status: 403 }
+        );
+      }
+    }
+    updates.tent_id = newTentId;
+  }
   if (body.username !== undefined) {
     const cleanUsername = normalizeUsername(String(body.username));
     if (!cleanUsername) {

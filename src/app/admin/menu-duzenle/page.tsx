@@ -1,8 +1,8 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import AiClarificationModal from '@/components/admin/AiClarificationModal';
 import CampDatesSummary from '@/components/admin/CampDatesSummary';
 import ListGenerationWizard from '@/components/admin/ListGenerationWizard';
@@ -54,7 +54,16 @@ function assistantComplete(profile: CampSetupProfile): boolean {
 }
 
 export default function MenuDuzenlePage() {
+  return (
+    <Suspense fallback={<p className="text-sm text-gray-500">Yükleniyor...</p>}>
+      <MenuDuzenleContent />
+    </Suspense>
+  );
+}
+
+function MenuDuzenleContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { profile, loading: profileLoading, saving, error: profileError, patchProfile, resetProfile } =
     useCampSetupProfile();
 
@@ -85,6 +94,15 @@ export default function MenuDuzenlePage() {
     errors: string[];
     listBaselineHeadcount: number | null;
   } | null>(null);
+  const [headcountReadiness, setHeadcountReadiness] = useState<{
+    ready: boolean;
+    participantCount: number;
+    adultCount: number;
+    childCount: number;
+    tentCount: number;
+    errors: string[];
+    listBaselineHeadcount: number | null;
+  } | null>(null);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const [savingDay, setSavingDay] = useState<string | null>(null);
@@ -107,6 +125,11 @@ export default function MenuDuzenlePage() {
   const debouncedWaterPatch = useDebouncedFn((patch: Partial<CampSetupProfile>) => {
     void patchProfile(patch);
   }, 600);
+
+  useEffect(() => {
+    const adim = Number(searchParams.get('adim'));
+    if (adim >= 1 && adim <= 5) setSetupStep(adim);
+  }, [searchParams]);
 
   const load = useCallback(async () => {
     const [campRes, daysRes, settingsRes] = await Promise.all([
@@ -140,8 +163,12 @@ export default function MenuDuzenlePage() {
   }, [load]);
 
   const loadListReadiness = useCallback(async () => {
-    const res = await fetch('/api/ai/list-readiness');
-    if (res.ok) setListReadiness(await res.json());
+    const [headRes, listRes] = await Promise.all([
+      fetch('/api/ai/list-readiness?scope=headcount'),
+      fetch('/api/ai/list-readiness?scope=list'),
+    ]);
+    if (headRes.ok) setHeadcountReadiness(await headRes.json());
+    if (listRes.ok) setListReadiness(await listRes.json());
   }, []);
 
   useEffect(() => {
@@ -367,8 +394,8 @@ export default function MenuDuzenlePage() {
             {setupStep === 4 && (
               <HeadcountConfirmStep
                 profile={profile}
-                readiness={listReadiness}
-                loading={!listReadiness}
+                readiness={headcountReadiness}
+                loading={!headcountReadiness}
                 onConfirm={(confirmed) => void patchProfile({ headcount_confirmed: confirmed })}
               />
             )}
@@ -536,10 +563,14 @@ export default function MenuDuzenlePage() {
             {generating ? 'AI Listesi Oluşturuluyor...' : 'Alışveriş Listesini Oluştur (AI)'}
           </button>
 
-          {!profile.headcount_confirmed && hasMenuContent && (
-            <p className="text-sm text-amber-800">
-              Liste için önce kurulum adımında kişi listesini onaylayın.
-            </p>
+          {!profile.headcount_confirmed && (
+            <button
+              type="button"
+              onClick={() => setSetupStep(4)}
+              className="min-h-[44px] w-full rounded-xl border-2 border-amber-300 bg-amber-50 text-sm font-semibold text-amber-900"
+            >
+              Kişi listesini onaylamak için 4. adıma git →
+            </button>
           )}
 
           {listReadiness?.ready && profile.headcount_confirmed && (
@@ -550,14 +581,10 @@ export default function MenuDuzenlePage() {
         </>
       )}
 
-      {setupStep < 5 && (
-        <button
-          type="button"
-          onClick={() => setSetupStep(5)}
-          className="text-sm font-semibold text-gray-500 underline"
-        >
-          Menü adımına atla (kurulumu sonra tamamlarım)
-        </button>
+      {setupStep < 4 && !profileLoading && (
+        <p className="text-center text-xs text-gray-500">
+          Adım {setupStep}/5 — kurulumu tamamlayınca menü adımına geçeceksiniz.
+        </p>
       )}
 
       <ListGenerationWizard

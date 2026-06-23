@@ -34,10 +34,13 @@ export default function HeadcountConfirmStep({
     return <p className="text-sm text-red-700">Kişi bilgisi yüklenemedi.</p>;
   }
 
+  const canConfirm = readiness.ready;
+
   return (
     <div className="space-y-4">
       <p className="text-sm text-gray-600">
-        Liste, kayıtlı kişi sayısına göre hesaplanır. Manuel sayı girişi yok — sadece onay.
+        Menüleri bir sonraki adımda gireceksiniz. Burada sadece kayıtlı kişi ve çadır sayısını
+        onaylıyorsunuz.
       </p>
 
       <div className="rounded-xl border-2 border-blue-100 bg-blue-50 p-4">
@@ -55,31 +58,45 @@ export default function HeadcountConfirmStep({
       </div>
 
       {readiness.errors.length > 0 && (
-        <div className="rounded-lg bg-red-50 p-3 text-sm text-red-800">
-          <ul className="list-disc pl-4">
+        <div className="rounded-lg bg-amber-50 p-3 text-sm text-amber-900">
+          <p className="font-semibold">Onaylamadan önce şunları tamamlayın:</p>
+          <ul className="mt-2 list-disc space-y-1 pl-4">
             {readiness.errors.map((e) => (
               <li key={e}>{e}</li>
             ))}
           </ul>
-          <Link href="/admin/kurulum" className="mt-2 inline-block font-semibold underline">
-            Kurulum sihirbazına git →
+          <Link
+            href="/admin/cadirlar?kurulum=1"
+            className="mt-3 inline-flex min-h-[44px] items-center rounded-xl bg-amber-600 px-4 text-sm font-semibold text-white"
+          >
+            Çadırlar ve kişiler sayfasına git →
           </Link>
         </div>
       )}
 
-      <label className="flex cursor-pointer items-start gap-3 rounded-lg border-2 border-gray-200 p-3">
+      <label
+        className={`flex items-start gap-3 rounded-lg border-2 p-3 ${
+          canConfirm ? 'cursor-pointer border-gray-200' : 'cursor-not-allowed border-gray-100 bg-gray-50 opacity-80'
+        }`}
+      >
         <input
           type="checkbox"
           checked={profile.headcount_confirmed}
           onChange={(e) => onConfirm(e.target.checked)}
-          disabled={!readiness.ready}
-          className="mt-1 h-5 w-5"
+          disabled={!canConfirm}
+          className="mt-1 h-5 w-5 disabled:cursor-not-allowed"
         />
         <span className="text-sm text-gray-800">
           <strong>Kişi listesi kesinleşti.</strong> Tüm katılımcılar kayıtlı ve çadırları atanmış;
           bu sayıya göre menü ve liste oluşturulsun.
         </span>
       </label>
+
+      {!canConfirm && (
+        <p className="text-xs text-gray-500">
+          Eksikleri tamamladıktan sonra bu sayfaya dönüp kutuyu işaretleyin.
+        </p>
+      )}
     </div>
   );
 }

@@ -2,7 +2,10 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { Plus } from 'lucide-react';
+import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import TentDetailModal from '@/components/admin/TentDetailModal';
+import TentPeopleBoard from '@/components/admin/TentPeopleBoard';
 import TentUpgradeModal from '@/components/admin/TentUpgradeModal';
 import TrialQuotaHint from '@/components/admin/TrialQuotaHint';
 import { markCredentialsShared } from '@/components/admin/SetupChecklist';
@@ -42,10 +45,15 @@ export default function TentsManager({
   const [users, setUsers] = useState<SafeUser[]>([]);
   const [limits, setLimits] = useState<CampaignLimits | null>(null);
   const [selectedTent, setSelectedTent] = useState<Tent | null>(null);
+  const [boardOpen, setBoardOpen] = useState(false);
+  const [highlightTentId, setHighlightTentId] = useState<string | null>(null);
   const [showAddTent, setShowAddTent] = useState(false);
   const [tentName, setTentName] = useState('');
   const [upgradeReason, setUpgradeReason] = useState<'tent' | 'user' | null>(null);
   const [error, setError] = useState('');
+
+  const searchParams = useSearchParams();
+  const fromKurulum = searchParams.get('kurulum') === '1';
 
   const load = useCallback(async () => {
     const [tRes, uRes, cRes] = await Promise.all([
@@ -120,8 +128,31 @@ export default function TentsManager({
     return limits ? tentCapacity(tent, limits.plan_tier) : tent.max_capacity ?? 4;
   }
 
+  function openTent(tent: Tent) {
+    setSelectedTent(tent);
+    setBoardOpen(true);
+    setHighlightTentId(tent.id);
+    setError('');
+  }
+
+  function openBoard() {
+    setBoardOpen(true);
+    setHighlightTentId(null);
+    setError('');
+  }
+
   return (
     <div className="space-y-6">
+      {fromKurulum && (
+        <div className="rounded-xl border-2 border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
+          Kişi ve çadır düzenlemesini bitirince{' '}
+          <Link href="/admin/menu-duzenle?adim=4" className="font-bold underline">
+            menü kurulumunun 4. adımına dönün
+          </Link>{' '}
+          ve kişi listesini onaylayın.
+        </div>
+      )}
+
       {limits && !tourMode && <TrialQuotaHint limits={limits} />}
       {error && <AuthAlert>{error}</AuthAlert>}
 
@@ -138,6 +169,42 @@ export default function TentsManager({
         </div>
       )}
 
+      <div className="flex flex-wrap gap-2">
+        <button
+          type="button"
+          onClick={openBoard}
+          className="min-h-[44px] rounded-xl border-2 border-forest-300 bg-white px-4 text-sm font-semibold text-forest-800"
+        >
+          Kişileri sürükle-bırak ile düzenle
+        </button>
+      </div>
+
+      {boardOpen && tents.length > 0 && (
+        <section className="rounded-2xl border-2 border-forest-200 bg-white p-4">
+          <div className="mb-3 flex items-center justify-between gap-2">
+            <h3 className="text-base font-bold text-forest-950">Çadır düzeni</h3>
+            <button
+              type="button"
+              onClick={() => {
+                setBoardOpen(false);
+                setHighlightTentId(null);
+              }}
+              className="text-sm font-semibold text-forest-500"
+            >
+              Gizle
+            </button>
+          </div>
+          <TentPeopleBoard
+            tents={tents}
+            users={users}
+            limits={limits}
+            highlightTentId={highlightTentId}
+            onRefresh={load}
+            onError={setError}
+          />
+        </section>
+      )}
+
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
         {tents.map((tent) => {
           const count = usersInTent(tent.id).length;
@@ -147,7 +214,7 @@ export default function TentsManager({
             <button
               key={tent.id}
               type="button"
-              onClick={() => setSelectedTent(tent)}
+              onClick={() => openTent(tent)}
               className="group flex min-h-[120px] flex-col items-center justify-center rounded-2xl border-2 border-forest-200 bg-white p-4 text-center shadow-sm transition-all hover:border-forest-500 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-forest-400"
             >
               <span className="text-3xl" aria-hidden>
