@@ -82,3 +82,74 @@ export async function getOrCreateDefaultSection(
 
   return created?.id ?? null;
 }
+
+export function normalizeSectionName(name: string): string {
+  return name.trim().toLowerCase();
+}
+
+/** AI listesi yeniden oluşturulunca shared bölümleri sıfırlar ve hint'lere göre yeniden kurar. */
+export async function rebuildSharedSectionsFromHints(
+  supabase: SupabaseClient,
+  campaignId: string,
+  hints: string[]
+): Promise<Map<string, string>> {
+  await supabase
+    .from('items')
+    .update({ section_id: null })
+    .eq('campaign_id', campaignId)
+    .eq('list_scope', 'shared');
+
+  await supabase
+    .from('list_sections')
+    .delete()
+    .eq('campaign_id', campaignId)
+    .eq('list_scope', 'shared');
+
+  const seen = new Set<string>();
+  const sectionNames: string[] = [];
+  for (const raw of hints) {
+    const name = raw.trim() || DEFAULT_SECTION_NAME;
+    const key = normalizeSectionName(name);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    sectionNames.push(name);
+  }
+  if (!sectionNames.length) sectionNames.push(DEFAULT_SECTION_NAME);
+
+  const nameToId = new Map<string, string>();
+  for (let i = 0; i < sectionNames.length; i++) {
+    const name = sectionNames[i];
+    const { data, error } = await supabase
+      .from('list_sections')
+      .insert({
+        campaign_id: campaignId,
+        list_scope: 'shared',
+        name,
+        sort_order: i,
+      })
+      .select('id')
+      .single();
+
+    if (!error && data) {
+      nameToId.set(normalizeSectionName(name), data.id);
+    }
+  }
+
+  if (!nameToId.has(normalizeSectionName(DEFAULT_SECTION_NAME))) {
+    const id = await getOrCreateDefaultSection(supabase, campaignId, 'shared');
+    if (id) nameToId.set(normalizeSectionName(DEFAULT_SECTION_NAME), id);
+  }
+
+  return nameToId;
+}
+
+export function resolveSectionId(
+  sectionMap: Map<string, string>,
+  hint?: string | null
+): string | null {
+  if (!hint?.trim()) {
+    return sectionMap.get(normalizeSectionName(DEFAULT_SECTION_NAME)) ?? null;
+  }
+  const key = normalizeSectionName(hint);
+  return sectionMap.get(key) ?? sectionMap.get(normalizeSectionName(DEFAULT_SECTION_NAME)) ?? null;
+}

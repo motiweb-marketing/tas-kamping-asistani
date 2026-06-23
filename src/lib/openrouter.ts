@@ -28,6 +28,7 @@ export interface AiGeneratedItemStructured extends AiGeneratedItem {
   quantity_unit: string;
   scales_with_people: boolean;
   notes?: string;
+  section_hint?: string;
 }
 
 export function buildSystemPrompt(params: PromptParams): string {
@@ -80,6 +81,12 @@ HESAPLAMA KURALLARI:
 6. Baharat/temel: tuz, karabiber, pul biber, zeytinyağı/ayçiçek yağı (menüde geçenlere göre).
 7. Tek seferlik ekipman (1 mangal, 1 büyük tencere) scales_with_people=false; tüketimlikler true.
 
+BÖLÜMLENDİRME (section_hint):
+- Her öğeye Türkçe alışveriş kategorisi ver: section_hint
+- Benzer malzemeler aynı kategoride olsun (5–10 kategori ideal)
+- Örnek kategoriler: "Et & Tavuk", "Sebze & Meyve", "Baharat & Sos", "İçecekler", "Mangal & Kömür", "Pişirme Ekipmanı", "Bulaşık & Temizlik", "Kahvaltılık"
+- Kategori uymuyorsa "Genel" kullan
+
 KESİNLİKLE DAHİL ETME (sistemde zaten var):
 - Tabak, bardak, çay bardağı, çatal, kaşık, bıçak, peçete (standart liste)
 - Deniz ayakkabısı, güneş kremi, şapka, mayo, kişisel ilaçlar (kişisel liste)
@@ -93,6 +100,7 @@ JSON FORMATI — her öğe:
   "quantity_unit": "kg",
   "scales_with_people": true,
   "category": "food" veya "equipment",
+  "section_hint": "Sebze & Meyve",
   "notes": "Kısa açıklama (isteğe bağlı)"
 }
 
@@ -203,6 +211,7 @@ function normalizeAiItem(raw: Record<string, unknown>): AiGeneratedItemStructure
     scales_with_people: scales,
     category,
     notes: raw.notes ? String(raw.notes).trim() : undefined,
+    section_hint: raw.section_hint ? String(raw.section_hint).trim() : undefined,
   };
 }
 

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import AiListGeneratingScreen from '@/components/admin/AiListGeneratingScreen';
 import {
   DEFAULT_LIST_GENERATION_CONTEXT,
   type ListGenerationContext,
@@ -25,15 +26,23 @@ interface Props {
   onClose: () => void;
   onGenerate: (context: ListGenerationContext) => Promise<void>;
   generating: boolean;
+  generateError?: string;
 }
 
-export default function ListGenerationWizard({ open, onClose, onGenerate, generating }: Props) {
+export default function ListGenerationWizard({
+  open,
+  onClose,
+  onGenerate,
+  generating,
+  generateError = '',
+}: Props) {
   const [step, setStep] = useState(1);
   const [readiness, setReadiness] = useState<Readiness | null>(null);
   const [loading, setLoading] = useState(false);
   const [context, setContext] = useState<ListGenerationContext>({
     ...DEFAULT_LIST_GENERATION_CONTEXT,
   });
+  const [lastContext, setLastContext] = useState<ListGenerationContext | null>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -57,6 +66,13 @@ export default function ListGenerationWizard({ open, onClose, onGenerate, genera
     context.headcount_confirmed &&
     readiness.participantCount >= (readiness.minParticipants || 2);
 
+  const showGenerating = generating || !!generateError;
+
+  async function handleGenerate() {
+    setLastContext(context);
+    await onGenerate(context);
+  }
+
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 p-4 sm:items-center">
       <div
@@ -69,14 +85,27 @@ export default function ListGenerationWizard({ open, onClose, onGenerate, genera
           <button
             type="button"
             onClick={onClose}
-            disabled={generating}
-            className="text-2xl leading-none text-gray-400"
+            disabled={generating && !generateError}
+            className="text-2xl leading-none text-gray-400 disabled:opacity-30"
             aria-label="Kapat"
           >
             ×
           </button>
         </div>
 
+        {showGenerating ? (
+          <AiListGeneratingScreen
+            participantCount={readiness?.participantCount}
+            error={generateError}
+            onCancel={generateError ? onClose : undefined}
+            onRetry={
+              generateError && lastContext
+                ? () => void onGenerate(lastContext)
+                : undefined
+            }
+          />
+        ) : (
+          <>
         <div className="mb-4 flex gap-2">
           {[1, 2, 3].map((n) => (
             <div
@@ -267,7 +296,7 @@ export default function ListGenerationWizard({ open, onClose, onGenerate, genera
               <li>Kişi eklenirse miktarlar otomatik güncellenir</li>
             </ul>
             <p className="text-xs text-gray-500">
-              Taslak olarak kaydedilir; yayınlamadan önce Kamp ihtiyaçları sayfasından kontrol edin.
+              Hazır olunca otomatik olarak Kamp ihtiyaçları sayfasına yönlendirileceksiniz.
             </p>
           </div>
         )}
@@ -277,7 +306,6 @@ export default function ListGenerationWizard({ open, onClose, onGenerate, genera
             <button
               type="button"
               onClick={() => setStep((s) => s - 1)}
-              disabled={generating}
               className="min-h-[48px] flex-1 rounded-xl border-2 border-gray-300 font-semibold"
             >
               Geri
@@ -295,14 +323,15 @@ export default function ListGenerationWizard({ open, onClose, onGenerate, genera
           ) : (
             <button
               type="button"
-              onClick={() => onGenerate(context)}
-              disabled={generating}
-              className="min-h-[48px] flex-1 rounded-xl bg-blue-600 font-semibold text-white disabled:opacity-50"
+              onClick={() => void handleGenerate()}
+              className="min-h-[48px] flex-1 rounded-xl bg-blue-600 font-semibold text-white"
             >
-              {generating ? 'Oluşturuluyor...' : 'Listeyi Oluştur'}
+              Listeyi Oluştur
             </button>
           )}
         </div>
+          </>
+        )}
       </div>
     </div>
   );

@@ -14,6 +14,10 @@ import {
   normalizeListGenerationContext,
   type ListGenerationContext,
 } from '@/lib/list-generation-context';
+import {
+  rebuildSharedSectionsFromHints,
+  resolveSectionId,
+} from '@/lib/list-sections';
 import { snapshotHeadcount } from '@/lib/sync-ai-list-quantities';
 
 const MIN_PARTICIPANTS = 2;
@@ -142,6 +146,12 @@ export async function POST(request: NextRequest) {
 
     const aiItems = await callOpenRouter(systemPrompt, apiKey);
 
+    const sectionMap = await rebuildSharedSectionsFromHints(
+      supabase,
+      campaignId,
+      aiItems.map((item) => item.section_hint || 'Genel')
+    );
+
     const { data: existingShared } = await supabase
       .from('items')
       .select('name')
@@ -179,6 +189,7 @@ export async function POST(request: NextRequest) {
         notes: item.notes || null,
         price: 0,
         added_by: session.user!.id,
+        section_id: resolveSectionId(sectionMap, item.section_hint),
       }));
 
     if (!rows.length) {
@@ -209,6 +220,8 @@ export async function POST(request: NextRequest) {
       items: data,
       count: data?.length || 0,
       headcount: headcount.total,
+      sectionCount: sectionMap.size,
+      redirectTo: '/admin/listeler/kamp',
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : 'AI hatası';

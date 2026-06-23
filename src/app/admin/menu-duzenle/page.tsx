@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import CampDatesSummary from '@/components/admin/CampDatesSummary';
 import ListGenerationWizard from '@/components/admin/ListGenerationWizard';
 import { useDebouncedFn } from '@/hooks/use-debounced-fn';
@@ -26,6 +27,7 @@ interface DayCard {
 type SectionKey = 'breakfast' | 'meal' | 'snack';
 
 export default function CampSettingsPage() {
+  const router = useRouter();
   const [campaign, setCampaign] = useState<{
     name: string;
     location: string;
@@ -40,6 +42,7 @@ export default function CampSettingsPage() {
   const [savingPrompt, setSavingPrompt] = useState(false);
   const [publishing, setPublishing] = useState(false);
   const [generating, setGenerating] = useState(false);
+  const [generateError, setGenerateError] = useState('');
   const [wizardOpen, setWizardOpen] = useState(false);
   const [listReadiness, setListReadiness] = useState<{
     ready: boolean;
@@ -170,6 +173,7 @@ export default function CampSettingsPage() {
 
   async function generateList(context: ListGenerationContext) {
     setGenerating(true);
+    setGenerateError('');
     setMessage('');
     setError('');
     const res = await fetch('/api/ai/generate-items', {
@@ -178,16 +182,18 @@ export default function CampSettingsPage() {
       body: JSON.stringify({ context }),
     });
     const data = await res.json();
-    setGenerating(false);
     if (!res.ok) {
-      setError(data.error || 'Hata oluştu');
+      setGenerating(false);
+      setGenerateError(data.error || 'Hata oluştu');
       return;
     }
+    router.push(data.redirectTo || '/admin/listeler/kamp?generated=1');
+  }
+
+  function closeWizard() {
     setWizardOpen(false);
-    setMessage(
-      `${data.count} kamp ihtiyacı (${data.headcount} kişi için) oluşturuldu. Listeler → Kamp ihtiyaçları sayfasından kontrol edip yayınlayın.`
-    );
-    loadListReadiness();
+    setGenerating(false);
+    setGenerateError('');
   }
 
   const hasMenuContent = days.some(
@@ -382,9 +388,10 @@ export default function CampSettingsPage() {
 
       <ListGenerationWizard
         open={wizardOpen}
-        onClose={() => setWizardOpen(false)}
+        onClose={closeWizard}
         onGenerate={generateList}
         generating={generating}
+        generateError={generateError}
       />
     </div>
   );
