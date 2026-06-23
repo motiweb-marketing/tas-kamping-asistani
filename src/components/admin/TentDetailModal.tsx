@@ -13,10 +13,12 @@ interface TentDetailModalProps {
   tent: Tent;
   users: SafeUser[];
   limits: CampaignLimits | null;
+  tentCount: number;
   showShareButtons: boolean;
   onClose: () => void;
   onRefresh: () => void;
   onDeleteUser: (id: string) => Promise<void>;
+  onDeleteTent: () => Promise<void>;
 }
 
 const emptyUserForm = { name: '', age: '30', username: '', password: '' };
@@ -25,10 +27,12 @@ export default function TentDetailModal({
   tent,
   users,
   limits,
+  tentCount,
   showShareButtons,
   onClose,
   onRefresh,
   onDeleteUser,
+  onDeleteTent,
 }: TentDetailModalProps) {
   const tentUsers = users.filter((u) => u.tent_id === tent.id);
   const [userForm, setUserForm] = useState(emptyUserForm);
@@ -40,6 +44,7 @@ export default function TentDetailModal({
   const [capacityMsg, setCapacityMsg] = useState('');
   const [upgradeOpen, setUpgradeOpen] = useState(false);
   const [savingCapacity, setSavingCapacity] = useState(false);
+  const [deletingTent, setDeletingTent] = useState(false);
 
   const planMax = limits?.max_users_per_tent ?? 4;
   const maxPerTent = limits
@@ -429,6 +434,29 @@ export default function TentDetailModal({
                 </button>
               </p>
             ) : null}
+
+            {tentCount > 1 && (
+              <div className="mt-6 border-t border-red-100 pt-4">
+                <p className="text-sm font-semibold text-red-800">Tehlikeli bölge</p>
+                <p className="mt-1 text-xs text-forest-500">
+                  Çadırı silerseniz içindeki kişiler çadırsız kalır; üstlendiği görevler ve
+                  malzemeler serbest bırakılır.
+                </p>
+                <AuthButton
+                  type="button"
+                  variant="secondary"
+                  loading={deletingTent}
+                  onClick={async () => {
+                    setDeletingTent(true);
+                    await onDeleteTent();
+                    setDeletingTent(false);
+                  }}
+                  className="mt-3 w-full border-red-200 bg-red-50 text-red-700 hover:bg-red-100"
+                >
+                  Çadırı sil
+                </AuthButton>
+              </div>
+            )}
           </div>
         </div>
       </div>

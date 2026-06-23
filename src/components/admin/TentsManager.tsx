@@ -124,6 +124,34 @@ export default function TentsManager({
     else load();
   }
 
+  async function deleteTent(tent: Tent) {
+    if (tents.length <= 1) {
+      setError('En az bir çadır kalmalı.');
+      return;
+    }
+
+    const count = usersInTent(tent.id).length;
+    const message =
+      count > 0
+        ? `"${tent.name}" silinsin mi? İçindeki ${count} kişi çadırsız kalacak; sonra başka çadıra taşıyabilirsiniz.`
+        : `"${tent.name}" çadırı silinsin mi?`;
+
+    if (!confirm(message)) return;
+
+    setError('');
+    const res = await fetch(`/api/tents/${tent.id}`, { method: 'DELETE' });
+    const data = await res.json();
+    if (!res.ok) {
+      setError(data.error || 'Çadır silinemedi');
+      return;
+    }
+
+    setSelectedTent(null);
+    setBoardOpen(false);
+    setHighlightTentId(null);
+    await load();
+  }
+
   function capacityFor(tent: Tent): number {
     return limits ? tentCapacity(tent, limits.plan_tier) : tent.max_capacity ?? 4;
   }
@@ -247,10 +275,12 @@ export default function TentsManager({
           tent={selectedTent}
           users={users}
           limits={limits}
+          tentCount={tents.length}
           showShareButtons={showShareButtons}
           onClose={() => setSelectedTent(null)}
           onRefresh={load}
           onDeleteUser={deleteUser}
+          onDeleteTent={() => deleteTent(selectedTent)}
         />
       )}
 

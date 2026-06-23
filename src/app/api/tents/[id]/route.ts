@@ -89,11 +89,54 @@ export async function DELETE(
   }
 
   const supabase = createServerClient();
+  const campaignId = session.user.campaign_id;
+
+  const { count: tentCount, error: countError } = await supabase
+    .from('tents')
+    .select('id', { count: 'exact', head: true })
+    .eq('campaign_id', campaignId);
+
+  if (countError) {
+    return NextResponse.json({ error: countError.message }, { status: 500 });
+  }
+
+  if ((tentCount ?? 0) <= 1) {
+    return NextResponse.json(
+      { error: 'En az bir çadır kalmalı. Son çadırı silemezsiniz.' },
+      { status: 400 }
+    );
+  }
+
+  const { data: tent, error: tentError } = await supabase
+    .from('tents')
+    .select('id')
+    .eq('id', params.id)
+    .eq('campaign_id', campaignId)
+    .maybeSingle();
+
+  if (tentError) {
+    return NextResponse.json({ error: tentError.message }, { status: 500 });
+  }
+
+  if (!tent) {
+    return NextResponse.json({ error: 'Çadır bulunamadı' }, { status: 404 });
+  }
+
+  await supabase
+    .from('items')
+    .update({ assigned_tent_id: null })
+    .eq('assigned_tent_id', params.id);
+
+  await supabase
+    .from('camp_duties')
+    .update({ assigned_tent_id: null })
+    .eq('assigned_tent_id', params.id);
+
   const { error } = await supabase
     .from('tents')
     .delete()
     .eq('id', params.id)
-    .eq('campaign_id', session.user.campaign_id);
+    .eq('campaign_id', campaignId);
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
