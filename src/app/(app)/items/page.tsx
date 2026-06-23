@@ -10,6 +10,11 @@ import SectionCard from '@/components/ui/SectionCard';
 import { clientDuplicateCheck } from '@/lib/item-duplicates';
 import { groupItemsBySection } from '@/lib/group-items-by-section';
 import { filterItemsBySearch } from '@/lib/item-names';
+import {
+  applyPersonalCheck,
+  applyTentCheck,
+  patchItemById,
+} from '@/lib/patch-items';
 import type { ItemCategory, ItemListScope, ItemWithRelations } from '@/types';
 
 type Tab = ItemListScope;
@@ -55,14 +60,43 @@ export default function ItemsPage() {
     category: 'food',
   });
 
-  const loadItems = useCallback(async (scope: Tab) => {
-    setLoading(true);
+  const loadItems = useCallback(async (scope: Tab, options?: { silent?: boolean }) => {
+    if (!options?.silent) setLoading(true);
     const extra = scope !== 'shared' ? '&participant=true' : '';
     const res = await fetch(`/api/items?scope=${scope}${extra}`);
     const data = await res.json();
     setItems(data.items || []);
-    setLoading(false);
+    if (!options?.silent) setLoading(false);
   }, []);
+
+  const patchItem = useCallback((id: string, patch: Partial<ItemWithRelations>) => {
+    setItems((prev) => patchItemById(prev, id, patch));
+  }, []);
+
+  const handleCheck = useCallback(
+    async (itemId: string, checked: boolean) => {
+      setItems((prev) =>
+        tab === 'personal'
+          ? applyPersonalCheck(prev, itemId, checked)
+          : applyTentCheck(prev, itemId, checked)
+      );
+
+      const res = await fetch('/api/items/check', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ item_id: itemId, checked }),
+      });
+
+      if (!res.ok) {
+        setItems((prev) =>
+          tab === 'personal'
+            ? applyPersonalCheck(prev, itemId, !checked)
+            : applyTentCheck(prev, itemId, !checked)
+        );
+      }
+    },
+    [tab]
+  );
 
   useEffect(() => {
     fetch('/api/campaign')
@@ -85,15 +119,6 @@ export default function ItemsPage() {
     setAddError(null);
     loadItems(tab);
   }, [tab, loadItems]);
-
-  async function handleCheck(itemId: string, checked: boolean) {
-    const res = await fetch('/api/items/check', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ item_id: itemId, checked }),
-    });
-    if (res.ok) loadItems(tab);
-  }
 
   async function handleAddItem(e: React.FormEvent) {
     e.preventDefault();
@@ -331,11 +356,7 @@ export default function ItemsPage() {
             >
               <div className="flex flex-col gap-3">
                 {standardItems.map((item) => (
-                  <SharedItemCard
-                    key={item.id}
-                    item={item}
-                    onUpdated={() => loadItems('shared')}
-                  />
+                  <SharedItemCard key={item.id} item={item} onItemPatched={patchItem} />
                 ))}
               </div>
             </SectionCard>
@@ -345,11 +366,7 @@ export default function ItemsPage() {
             <SectionCard key={group.id} title={group.name}>
               <div className="flex flex-col gap-3">
                 {group.items.map((item) => (
-                  <SharedItemCard
-                    key={item.id}
-                    item={item}
-                    onUpdated={() => loadItems('shared')}
-                  />
+                  <SharedItemCard key={item.id} item={item} onItemPatched={patchItem} />
                 ))}
               </div>
             </SectionCard>

@@ -1,13 +1,14 @@
 'use client';
 
+import { memo, useState } from 'react';
 import Link from 'next/link';
-import { useState } from 'react';
 import ExtraBadge from './ExtraBadge';
+import { applySharedClaimPatch, applySharedClaimRemoved } from '@/lib/patch-items';
 import type { ItemWithRelations } from '@/types';
 
 interface SharedItemCardProps {
   item: ItemWithRelations;
-  onUpdated: () => void;
+  onItemPatched?: (id: string, patch: Partial<ItemWithRelations>) => void;
 }
 
 const DISPOSITION_LABELS = {
@@ -15,7 +16,7 @@ const DISPOSITION_LABELS = {
   returnable: 'Geri götürülür',
 } as const;
 
-export default function SharedItemCard({ item, onUpdated }: SharedItemCardProps) {
+function SharedItemCard({ item, onItemPatched }: SharedItemCardProps) {
   const [claimQty, setClaimQty] = useState(String(item.my_claim || 1));
   const [showClaim, setShowClaim] = useState(false);
   const [error, setError] = useState('');
@@ -34,10 +35,17 @@ export default function SharedItemCard({ item, onUpdated }: SharedItemCardProps)
       ? 'border-blue-300 bg-blue-50'
       : 'border-amber-300 bg-amber-50';
 
+  function patch(next: ItemWithRelations) {
+    onItemPatched?.(next.id, next);
+  }
+
   async function submitClaim() {
     setSaving(true);
     setError('');
     const qty = Number(claimQty);
+    const optimistic = applySharedClaimPatch(item, qty, (item.claimed_total ?? 0) - (item.my_claim || 0) + qty);
+    patch(optimistic);
+
     const res = await fetch('/api/items/claim', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -46,20 +54,27 @@ export default function SharedItemCard({ item, onUpdated }: SharedItemCardProps)
     const data = await res.json();
     setSaving(false);
     if (!res.ok) {
+      patch(item);
       setError(data.error || 'Üstlenilemedi');
       return;
     }
     setShowClaim(false);
-    onUpdated();
+    patch(applySharedClaimPatch(item, qty, data.claimed_total as number));
   }
 
   async function removeClaim() {
-    await fetch(`/api/items/claim?item_id=${item.id}`, { method: 'DELETE' });
-    onUpdated();
+    const previous = item;
+    patch(applySharedClaimRemoved(item));
+
+    const res = await fetch(`/api/items/claim?item_id=${item.id}`, { method: 'DELETE' });
+    if (!res.ok) {
+      patch(previous);
+      setError('Kaldırılamadı');
+    }
   }
 
   return (
-    <div className={`rounded-2xl border-2 p-4 shadow-sm transition-shadow hover:shadow-md ${bgClass}`}>
+    <div className={`rounded-2xl border-2 p-4 shadow-sm transition-colors ${bgClass}`}>
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
@@ -79,9 +94,7 @@ export default function SharedItemCard({ item, onUpdated }: SharedItemCardProps)
             {item.quantity} · {item.category === 'food' ? 'Yiyecek' : 'Ekipman'} ·{' '}
             {DISPOSITION_LABELS[item.disposition || 'consumable']}
           </p>
-          {item.notes?.trim() && (
-            <p className="mt-1 text-sm text-gray-600">{item.notes}</p>
-          )}
+          {item.notes?.trim() && <p className="mt-1 text-sm text-gray-600">{item.notes}</p>}
           {item.is_extra && item.added_by_user && (
             <div className="mt-2">
               <ExtraBadge name={item.added_by_user.name} />
@@ -134,7 +147,7 @@ export default function SharedItemCard({ item, onUpdated }: SharedItemCardProps)
         {item.my_claim ? (
           <button
             type="button"
-            onClick={removeClaim}
+            onClick={() => void removeClaim()}
             className="min-h-[48px] rounded-xl border-2 border-gray-300 bg-white px-4 text-sm font-semibold text-gray-700"
           >
             Kaldır
@@ -155,7 +168,9 @@ export default function SharedItemCard({ item, onUpdated }: SharedItemCardProps)
           <label className="block text-sm font-semibold text-gray-800">
             Kaç {unit} getiriyorsunuz?
           </label>
-          <p className="text-xs text-gray-500">En fazla {remaining + (item.my_claim || 0)} {unit}</p>
+          <p className="text-xs text-gray-500">
+            En fazla {remaining + (item.my_claim || 0)} {unit}
+          </p>
           <input
             type="number"
             min={1}
@@ -168,7 +183,7 @@ export default function SharedItemCard({ item, onUpdated }: SharedItemCardProps)
             <button
               type="button"
               disabled={saving}
-              onClick={submitClaim}
+              onClick={() => void submitClaim()}
               className="min-h-[44px] flex-1 rounded-xl bg-emerald-600 font-semibold text-white disabled:opacity-50"
             >
               {saving ? 'Kaydediliyor...' : 'Onayla'}
@@ -186,3 +201,5 @@ export default function SharedItemCard({ item, onUpdated }: SharedItemCardProps)
     </div>
   );
 }
+
+export default memo(SharedItemCard);

@@ -9,6 +9,11 @@ import PageHeader from '@/components/ui/PageHeader';
 import SectionCard from '@/components/ui/SectionCard';
 import StatCard from '@/components/ui/StatCard';
 import { filterItemsBySearch } from '@/lib/item-names';
+import {
+  applyPersonalCheck,
+  applyTentCheck,
+  patchItemById,
+} from '@/lib/patch-items';
 import type { CampDutyWithRelations, ItemWithRelations, SessionUser } from '@/types';
 
 type FilterTab = 'all' | 'shared' | 'tent' | 'personal' | 'duties';
@@ -23,7 +28,8 @@ export default function MyTentPage() {
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState<FilterTab>('all');
 
-  const loadAll = useCallback(async (tentId?: string | null) => {
+  const loadAll = useCallback(async (tentId?: string | null, options?: { silent?: boolean }) => {
+    if (!options?.silent) setLoading(true);
     const [meRes, sharedRes, tentRes, personalRes, dutiesRes] = await Promise.all([
       fetch('/api/auth/me'),
       fetch('/api/items?scope=shared'),
@@ -54,21 +60,44 @@ export default function MyTentPage() {
         d.assigned_user_id === meData.user?.id
     );
     setDuties(myDuties);
-    setLoading(false);
+    if (!options?.silent) setLoading(false);
   }, []);
 
-  useEffect(() => {
-    loadAll();
-  }, [loadAll]);
+  const patchSharedItem = useCallback((id: string, patch: Partial<ItemWithRelations>) => {
+    setSharedItems((prev) => patchItemById(prev, id, patch));
+  }, []);
 
-  async function handleCheck(itemId: string, checked: boolean) {
+  const handleCheck = useCallback(async (itemId: string, checked: boolean) => {
+    setPersonalItems((prev) => {
+      if (!prev.some((i) => i.id === itemId)) return prev;
+      return applyPersonalCheck(prev, itemId, checked);
+    });
+    setTentItems((prev) => {
+      if (!prev.some((i) => i.id === itemId)) return prev;
+      return applyTentCheck(prev, itemId, checked);
+    });
+
     const res = await fetch('/api/items/check', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ item_id: itemId, checked }),
     });
-    if (res.ok) loadAll(user?.tent_id);
-  }
+
+    if (!res.ok) {
+      setPersonalItems((prev) => {
+        if (!prev.some((i) => i.id === itemId)) return prev;
+        return applyPersonalCheck(prev, itemId, !checked);
+      });
+      setTentItems((prev) => {
+        if (!prev.some((i) => i.id === itemId)) return prev;
+        return applyTentCheck(prev, itemId, !checked);
+      });
+    }
+  }, []);
+
+  useEffect(() => {
+    loadAll();
+  }, [loadAll]);
 
   if (loading) {
     return <p className="text-lg text-gray-500">Yükleniyor...</p>;
@@ -196,7 +225,7 @@ export default function MyTentPage() {
                 <SharedItemCard
                   key={item.id}
                   item={item}
-                  onUpdated={() => loadAll(user.tent_id)}
+                  onItemPatched={patchSharedItem}
                 />
               ))}
             </div>

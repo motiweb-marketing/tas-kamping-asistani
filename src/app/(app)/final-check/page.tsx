@@ -6,6 +6,7 @@ import ChecklistItemCard from '@/components/items/ChecklistItemCard';
 import PageHeader from '@/components/ui/PageHeader';
 import SectionCard from '@/components/ui/SectionCard';
 import { getPackedItems, setPackedItem } from '@/lib/final-check-storage';
+import { applyPersonalCheck, applyTentCheck } from '@/lib/patch-items';
 import type { CampDutyWithRelations, ItemWithRelations, SessionUser } from '@/types';
 
 export default function FinalCheckPage() {
@@ -59,12 +60,31 @@ export default function FinalCheckPage() {
   }, [loadAll]);
 
   async function handleCheck(itemId: string, checked: boolean) {
+    setPersonalItems((prev) => {
+      if (!prev.some((i) => i.id === itemId)) return prev;
+      return applyPersonalCheck(prev, itemId, checked);
+    });
+    setTentItems((prev) => {
+      if (!prev.some((i) => i.id === itemId)) return prev;
+      return applyTentCheck(prev, itemId, checked);
+    });
+
     const res = await fetch('/api/items/check', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ item_id: itemId, checked }),
     });
-    if (res.ok) loadAll();
+
+    if (!res.ok) {
+      setPersonalItems((prev) => {
+        if (!prev.some((i) => i.id === itemId)) return prev;
+        return applyPersonalCheck(prev, itemId, !checked);
+      });
+      setTentItems((prev) => {
+        if (!prev.some((i) => i.id === itemId)) return prev;
+        return applyTentCheck(prev, itemId, !checked);
+      });
+    }
   }
 
   function handlePackToggle(itemId: string, checked: boolean) {
