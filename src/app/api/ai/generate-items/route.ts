@@ -4,9 +4,18 @@ import { dayMenuToFlat, rowsToDayMap } from '@/lib/menu-storage';
 import { getSession } from '@/lib/session';
 import { createServerClient } from '@/lib/supabase/server';
 import {
+  enrichAiGeneratedItems,
+  ensureCalculationNotes,
+} from '@/lib/enrich-ai-items';
+import {
+  analyzeMenuIngredients,
+  formatComputedNeedsForPrompt,
+} from '@/lib/menu-ingredient-analysis';
+import {
   buildSystemPrompt,
   callOpenRouter,
   callOpenRouterClarifications,
+  callOpenRouterPortionResearch,
   computeNeededCountFromQuantity,
 } from '@/lib/openrouter';
 import { getPlatformOpenRouterKey } from '@/lib/platform-settings';
@@ -152,9 +161,30 @@ export async function POST(request: NextRequest) {
   );
 
   const waterPlan = computeWaterPlan(profile.water, headcount.total, campDays);
+
+  const menuTextForResearch = menus
+    .map((m) => `${m.day}: ${m.description}`)
+    .join('\n');
+  const computedNeeds = analyzeMenuIngredients(
+    menus,
+    headcount.adults,
+    headcount.children
+  );
+
+  const [portionResearch] = await Promise.all([
+    callOpenRouterPortionResearch(
+      menuTextForResearch,
+      headcount.total,
+      campDays,
+      apiKey
+    ),
+  ]);
+
   const extraPrompt = [
     buildMenuPromptFromProfile(profile),
     formatWaterPlanForPrompt(profile, headcount.total, campDays),
+    formatComputedNeedsForPrompt(computedNeeds),
+    portionResearch,
     body.clarification_answers
       ? `Kullanıcı netleştirmeleri: ${JSON.stringify(body.clarification_answers)}`
       : '',
@@ -194,10 +224,13 @@ export async function POST(request: NextRequest) {
       .eq('is_extra', false);
 
     const aiItemsRaw = await callOpenRouter(systemPrompt, apiKey);
-    const aiItems = [
-      ...filterAiItemsWithoutWater(aiItemsRaw),
-      ...waterItemsToAiRows(waterPlan.items),
-    ];
+    const enriched = ensureCalculationNotes(
+      enrichAiGeneratedItems(
+        filterAiItemsWithoutWater(aiItemsRaw),
+        computedNeeds
+      )
+    );
+    const aiItems = [...enriched, ...waterItemsToAiRows(waterPlan.items)];
 
     const sectionMap = await rebuildSharedSectionsFromHints(
       supabase,

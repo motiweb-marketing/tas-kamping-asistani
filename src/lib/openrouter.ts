@@ -83,6 +83,16 @@ HESAPLAMA KURALLARI:
 6. Baharat/temel: tuz, karabiber, pul biber, zeytinyağı/ayçiçek yağı (menüde geçenlere göre).
 7. Tek seferlik ekipman (1 mangal, 1 büyük tencere) scales_with_people=false; tüketimlikler true.
 
+MALZEME SATIRLARI — KESİNLİKLE UY:
+- Her sebze, meyve ve malzeme AYRI satır olmalı. ASLA gruplama yapma.
+  YASAK örnekler: "Salata malzemeleri", "Salata malzemeleri (domates, salatalık)", "Çeşitli sebze", parantez içinde virgüllü liste.
+  DOĞRU: "Domates", "Salatalık", "Yeşillik" ayrı üç satır.
+- Aynı malzeme menüde birden fazla yemekte geçiyorsa (ör. domates hem menemende hem salatada) TEK satırda TOPLA.
+- Kişi başı porsiyon: yetişkin tam, çocuk ~%70. Türk ev mutfağı / kamp porsiyonlarını kullan.
+  Örnek referans (yetişkin/öğün): domates salata 100g, menemen 130g; salatalık salata 80g; yeşillik 50g; tavuk ızgara 240g.
+- notes alanı ZORUNLU ve hesap içermeli. Format: "Hesap: N kişi × Xg/kişi (yemek1 + yemek2) = Y kg; fire %15"
+  Örnek: "Hesap: 10 kişi × 230g/kişi (menemen 130g + salata 100g) = 2.6 kg; fire %15"
+
 BÖLÜMLENDİRME (section_hint):
 - Her öğeye Türkçe alışveriş kategorisi ver: section_hint
 - Benzer malzemeler aynı kategoride olsun (5–10 kategori ideal)
@@ -104,7 +114,7 @@ JSON FORMATI — her öğe:
   "scales_with_people": true,
   "category": "food" veya "equipment",
   "section_hint": "Sebze & Meyve",
-  "notes": "Kısa açıklama (isteğe bağlı)"
+  "notes": "Hesap: ... (zorunlu — kişi × porsiyon × öğün)"
 }
 
 quantity_amount sayısal olmalı. quantity = quantity_amount + boşluk + quantity_unit.
@@ -149,10 +159,14 @@ Yanıtın SADECE JSON array olmalı. Format:
 [{"date":"YYYY-MM-DD","title":"...","show_breakfast":true,"show_meal":false,"show_snack":false,"breakfast":"","meal":"...","snack":""}]`;
 }
 
+const DEFAULT_MODEL = 'openai/gpt-4o-mini';
+const RESEARCH_MODEL = 'perplexity/sonar';
+
 async function callOpenRouterRaw(
   systemPrompt: string,
   userMessage: string,
-  apiKey: string
+  apiKey: string,
+  model = DEFAULT_MODEL
 ): Promise<string> {
   if (!apiKey?.trim()) {
     throw new Error('AI şu an kullanılamıyor. Pro sürümde bu özellik otomatik dahildir.');
@@ -165,12 +179,12 @@ async function callOpenRouterRaw(
       ...OPENROUTER_HEADERS,
     },
     body: JSON.stringify({
-      model: 'openai/gpt-4o-mini',
+      model,
       messages: [
         { role: 'system', content: systemPrompt },
         { role: 'user', content: userMessage },
       ],
-      temperature: 0.35,
+      temperature: model === RESEARCH_MODEL ? 0.2 : 0.35,
     }),
   });
 
@@ -181,6 +195,48 @@ async function callOpenRouterRaw(
 
   const data = await res.json();
   return data.choices?.[0]?.message?.content || '';
+}
+
+/** İnternet destekli model ile menü malzemeleri için porsiyon araştırması. */
+export async function callOpenRouterPortionResearch(
+  menuText: string,
+  totalPeople: number,
+  campDays: number,
+  apiKey: string
+): Promise<string | null> {
+  const systemPrompt = `Sen Türkiye'de kamp ve toplu yemek porsiyon uzmanısın.
+Menüdeki her malzeme için kişi başı toplam gram hesapla. Türk ev mutfağı ve catering standartlarını kullan; gerekirse güncel kaynaklardan doğrula.
+Her malzeme AYRI satır. Gruplama yapma.
+Yanıt SADECE JSON: {"ingredients":[{"name":"Domates","grams_per_person":230,"breakdown":"menemen 130g + salata 100g"}]}`;
+
+  const userMessage = `Kamp: ${totalPeople} kişi, ${campDays} gün.\nMenü:\n${menuText}`;
+
+  try {
+    const content = await callOpenRouterRaw(
+      systemPrompt,
+      userMessage,
+      apiKey,
+      RESEARCH_MODEL
+    );
+    const jsonMatch = content.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) return null;
+
+    const parsed = JSON.parse(jsonMatch[0]) as {
+      ingredients?: { name: string; grams_per_person: number; breakdown?: string }[];
+    };
+    const lines = (parsed.ingredients || [])
+      .filter((i) => i.name && i.grams_per_person > 0)
+      .map((i) => {
+        const totalKg = Math.round((i.grams_per_person * totalPeople * 1.15) / 100) / 10;
+        const breakdown = i.breakdown ? ` (${i.breakdown})` : '';
+        return `- ${i.name}: ~${totalKg} kg — ${i.grams_per_person}g/kişi${breakdown}`;
+      });
+
+    if (!lines.length) return null;
+    return `İNTERNET PORSİYON ARAŞTIRMASI (referans — altına düşme):\n${lines.join('\n')}`;
+  } catch {
+    return null;
+  }
 }
 
 function normalizeAiItem(raw: Record<string, unknown>): AiGeneratedItemStructured | null {
