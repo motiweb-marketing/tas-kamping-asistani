@@ -7,8 +7,8 @@ const platformPaths = ['/platform'];
 const authPaths = ['/login'];
 const platformAuthPaths = ['/platform/login'];
 
-function homeForRole(role?: string): string {
-  return role === 'admin' ? '/admin' : '/home';
+function homeForRole(_role?: string): string {
+  return '/home';
 }
 
 export async function middleware(request: NextRequest) {

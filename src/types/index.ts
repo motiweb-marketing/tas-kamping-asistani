@@ -16,6 +16,7 @@ export type {
   ChatMessage,
   AiGeneratedItem,
   MenuSummaryLine,
+  ListSection,
 } from './database';
 
 export type {

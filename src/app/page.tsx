@@ -18,7 +18,7 @@ export const metadata: Metadata = {
 export default async function HomePage() {
   const session = await getSession();
   if (session.isLoggedIn) {
-    redirect(session.user?.role === 'admin' ? '/admin' : '/home');
+    redirect('/home');
   }
 
   return (

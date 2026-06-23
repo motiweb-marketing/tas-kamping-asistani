@@ -8,6 +8,7 @@ import SharedItemCard from '@/components/items/SharedItemCard';
 import PageHeader from '@/components/ui/PageHeader';
 import SectionCard from '@/components/ui/SectionCard';
 import { clientDuplicateCheck } from '@/lib/item-duplicates';
+import { groupItemsBySection } from '@/lib/group-items-by-section';
 import { filterItemsBySearch } from '@/lib/item-names';
 import type { ItemCategory, ItemListScope, ItemWithRelations } from '@/types';
 
@@ -119,8 +120,10 @@ export default function ItemsPage() {
 
   const activeTab = TABS.find((t) => t.id === tab)!;
   const filteredItems = filterItemsBySearch(items, search);
-  const standardItems = filteredItems.filter((i) => i.is_standard);
-  const foodItems = filteredItems.filter((i) => !i.is_standard);
+  const standardItems = tab === 'shared' ? filteredItems.filter((i) => i.is_standard) : [];
+  const nonStandardItems =
+    tab === 'shared' ? filteredItems.filter((i) => !i.is_standard) : filteredItems;
+  const sectionGroups = groupItemsBySection(nonStandardItems);
   const openCount =
     tab === 'shared'
       ? items.filter((i) => (i.remaining_count ?? 1) > 0).length
@@ -265,14 +268,20 @@ export default function ItemsPage() {
       ) : filteredItems.length === 0 ? (
         <p className="text-lg text-gray-500">Aramanızla eşleşen malzeme yok.</p>
       ) : tab === 'personal' || tab === 'tent' ? (
-        <div className="flex flex-col gap-3">
-          {filteredItems.map((item) => (
-            <ChecklistItemCard
-              key={item.id}
-              item={item}
-              checked={tab === 'personal' ? !!item.checked : !!item.tent_checked}
-              onToggle={handleCheck}
-            />
+        <div className="flex flex-col gap-6">
+          {sectionGroups.map((group) => (
+            <SectionCard key={group.id} title={group.name}>
+              <div className="flex flex-col gap-3">
+                {group.items.map((item) => (
+                  <ChecklistItemCard
+                    key={item.id}
+                    item={item}
+                    checked={tab === 'personal' ? !!item.checked : !!item.tent_checked}
+                    onToggle={handleCheck}
+                  />
+                ))}
+              </div>
+            </SectionCard>
           ))}
         </div>
       ) : (
@@ -294,10 +303,10 @@ export default function ItemsPage() {
             </SectionCard>
           )}
 
-          {foodItems.length > 0 && (
-            <SectionCard title="Yemek ve diğer ortak alışveriş">
+          {sectionGroups.map((group) => (
+            <SectionCard key={group.id} title={group.name}>
               <div className="flex flex-col gap-3">
-                {foodItems.map((item) => (
+                {group.items.map((item) => (
                   <SharedItemCard
                     key={item.id}
                     item={item}
@@ -306,7 +315,7 @@ export default function ItemsPage() {
                 ))}
               </div>
             </SectionCard>
-          )}
+          ))}
         </div>
       )}
     </div>

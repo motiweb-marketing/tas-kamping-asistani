@@ -6,7 +6,14 @@ import { Suspense, useCallback, useEffect, useState } from 'react';
 import AuthAlert from '@/components/auth/AuthAlert';
 import AuthButton from '@/components/auth/AuthButton';
 import { canAdvanceFromStep, SETUP_STEPS, type SetupProgressInput } from '@/lib/admin-setup';
-import { TOUR_STEP_TIPS, isAdminTourDone, markAdminTourDone } from '@/lib/admin-tour';
+import {
+  TOUR_STEP_TIPS,
+  completeLeaderOnboarding,
+  enableAdminPulse,
+  isAdminTourDone,
+  isLeaderOnboardingActive,
+  markAdminTourDone,
+} from '@/lib/admin-tour';
 import KurulumStepBar from './KurulumStepBar';
 import StepFrame from './StepFrame';
 import Step1Kamp from './steps/Step1Kamp';
@@ -16,6 +23,7 @@ import Step5ListeGuide from './steps/Step5ListeGuide';
 import Step6Paylas from './steps/Step6Paylas';
 import TourWelcome from './TourWelcome';
 import TentsManager from '@/components/admin/TentsManager';
+import LeaderKurulumBubble from '@/components/onboarding/LeaderKurulumBubble';
 
 function KurulumWizardInner() {
   const router = useRouter();
@@ -23,6 +31,7 @@ function KurulumWizardInner() {
   const adim = Math.min(6, Math.max(1, Number(searchParams.get('adim')) || 1));
 
   const [showWelcome, setShowWelcome] = useState(false);
+  const [leaderMode, setLeaderMode] = useState(false);
   const [userCount, setUserCount] = useState(0);
   const [tentCount, setTentCount] = useState(0);
   const [progress, setProgress] = useState<SetupProgressInput>({
@@ -78,6 +87,12 @@ function KurulumWizardInner() {
   }, [loadProgress, adim]);
 
   useEffect(() => {
+    const leader = searchParams.get('leader') === '1' || isLeaderOnboardingActive();
+    setLeaderMode(leader);
+    if (leader) {
+      enableAdminPulse();
+      return;
+    }
     const welcome = searchParams.get('welcome') === '1';
     const tourDone = isAdminTourDone();
     if ((welcome || !tourDone) && !searchParams.get('adim')) {
@@ -87,10 +102,12 @@ function KurulumWizardInner() {
 
   const step = SETUP_STEPS.find((s) => s.id === adim)!;
   const tip = TOUR_STEP_TIPS[adim];
+  const leaderGuide = leaderMode;
 
   function goTo(next: number) {
     setAdvanceError('');
-    router.push(`/admin/kurulum?adim=${next}`);
+    const leaderQ = leaderMode ? '&leader=1' : '';
+    router.push(`/admin/kurulum?adim=${next}${leaderQ}`);
   }
 
   function handleNext() {
@@ -107,6 +124,7 @@ function KurulumWizardInner() {
 
   function skipTour() {
     markAdminTourDone();
+    completeLeaderOnboarding();
     setShowWelcome(false);
     router.push('/admin');
   }
@@ -118,12 +136,15 @@ function KurulumWizardInner() {
 
   function finishTour() {
     markAdminTourDone();
+    completeLeaderOnboarding();
     router.push('/admin');
   }
 
   return (
     <div>
-      {showWelcome && <TourWelcome onStart={startTour} onSkip={skipTour} />}
+      {showWelcome && !leaderMode && <TourWelcome onStart={startTour} onSkip={skipTour} />}
+
+      <LeaderKurulumBubble step={adim} />
 
       <header className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
@@ -148,8 +169,8 @@ function KurulumWizardInner() {
 
       <StepFrame
         title={step.title}
-        description={tip.body}
-        bullets={tip.bullets}
+        description={leaderGuide ? '' : tip.body}
+        bullets={leaderGuide ? undefined : tip.bullets}
         highlight={adim === 2 && userCount < 2}
       >
         {adim === 1 && <Step1Kamp onSaved={loadProgress} />}

@@ -27,7 +27,7 @@ function TentLoginForm() {
     const res = await fetch('/api/auth/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username, password, mode: 'tent' }),
+      body: JSON.stringify({ username, password }),
     });
 
     const data = await res.json();
@@ -77,9 +77,9 @@ export default function LoginPage() {
         subtitle="Organizatörün size verdiği kullanıcı adı ve şifre ile giriş yapın."
         footer={
           <p className="text-center text-sm text-forest-600">
-            Organizatör müsünüz?{' '}
-            <Link href="/login/admin" className="font-semibold text-forest-800 underline hover:text-forest-950">
-              Admin girişi
+            Organizatör müsünüz? Aynı form ile giriş yapabilirsiniz.{' '}
+            <Link href="/setup" className="font-semibold text-forest-800 underline hover:text-forest-950">
+              Ücretsiz kamp oluştur
             </Link>
           </p>
         }

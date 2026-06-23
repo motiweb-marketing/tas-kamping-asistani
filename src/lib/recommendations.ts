@@ -3,6 +3,7 @@ import {
   DEFAULT_PERSONAL_CHECKLIST,
   DEFAULT_TENT_CHECKLIST,
 } from '@/lib/default-checklists';
+import { ensureListSections } from '@/lib/list-sections';
 import type { ItemListScope } from '@/types';
 
 function toRows(campaignId: string, scope: ItemListScope) {
@@ -39,6 +40,7 @@ export async function ensureCampaignRecommendations(
   }
 
   if (count && count > 0) {
+    await ensureListSections(supabase, campaignId, ['personal', 'tent']);
     return { seeded: 0 };
   }
 
@@ -48,6 +50,8 @@ export async function ensureCampaignRecommendations(
   if (insertErr) {
     throw new Error(insertErr.message);
   }
+
+  await ensureListSections(supabase, campaignId, ['personal', 'tent']);
 
   return { seeded: rows.length };
 }

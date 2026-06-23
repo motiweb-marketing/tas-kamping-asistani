@@ -133,8 +133,8 @@ async function checkFrontend() {
 
   const pages = [
     { path: '/', expect: 'Kamp Asistanı' },
-    { path: '/login', expect: 'Çadıra Giriş' },
-    { path: '/login/admin', expect: 'Admin Girişi' },
+    { path: '/login', expect: 'Çadıra giriş yap' },
+    { path: '/login/admin', expect: 'Çadıra giriş yap' },
     { path: '/items', expect: null }, // redirect to login
   ];
 

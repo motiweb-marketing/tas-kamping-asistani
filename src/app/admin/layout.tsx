@@ -1,4 +1,5 @@
 import AdminSidebar from '@/components/admin/AdminSidebar';
+import AdminPulseClear from '@/components/admin/AdminPulseClear';
 import { getSession } from '@/lib/session';
 import { redirect } from 'next/navigation';
 
@@ -15,6 +16,7 @@ export default async function AdminLayout({
 
   return (
     <div className="flex min-h-screen flex-col bg-sand-50 lg:flex-row">
+      <AdminPulseClear />
       <AdminSidebar />
       <div className="flex min-w-0 flex-1 flex-col">
         <main className="mx-auto w-full max-w-3xl flex-1 px-3 py-4 sm:px-4 lg:max-w-4xl lg:p-6">

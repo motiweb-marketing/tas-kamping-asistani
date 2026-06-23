@@ -105,7 +105,18 @@ export interface Item {
   quantity_amount?: number | null;
   quantity_unit_text?: string | null;
   baseline_headcount?: number | null;
+  section_id?: string | null;
   created_at: string;
+}
+
+export interface ListSection {
+  id: string;
+  campaign_id: string;
+  list_scope: ItemListScope;
+  name: string;
+  sort_order: number;
+  created_at: string;
+  item_count?: number;
 }
 
 export interface ItemClaim {

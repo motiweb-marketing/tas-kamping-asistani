@@ -1,7 +1,9 @@
 'use client';
 
 import Link from 'next/link';
+import { useEffect, useState } from 'react';
 import LogoutButton from './LogoutButton';
+import { shouldShowAdminPulse } from '@/lib/admin-tour';
 
 interface AppHeaderProps {
   userName: string;
@@ -9,6 +11,19 @@ interface AppHeaderProps {
 }
 
 export default function AppHeader({ userName, isAdmin }: AppHeaderProps) {
+  const [pulse, setPulse] = useState(false);
+
+  useEffect(() => {
+    setPulse(shouldShowAdminPulse());
+    const sync = () => setPulse(shouldShowAdminPulse());
+    window.addEventListener('kamp-admin-pulse', sync);
+    window.addEventListener('storage', sync);
+    return () => {
+      window.removeEventListener('kamp-admin-pulse', sync);
+      window.removeEventListener('storage', sync);
+    };
+  }, []);
+
   return (
     <header className="sticky top-0 z-40 border-b border-gray-200/80 bg-white/95 px-4 py-3 backdrop-blur-md">
       <div className="flex items-center justify-between gap-2">
@@ -25,8 +40,11 @@ export default function AppHeader({ userName, isAdmin }: AppHeaderProps) {
           </Link>
           {isAdmin && (
             <Link
-              href="/admin"
-              className="rounded-xl bg-emerald-100 px-2.5 py-1.5 text-xs font-semibold text-emerald-800 sm:text-sm"
+              href="/admin/kurulum?adim=1&leader=1"
+              className={`rounded-xl bg-emerald-100 px-2.5 py-1.5 text-xs font-semibold text-emerald-800 sm:text-sm ${
+                pulse ? 'animate-pulse ring-2 ring-emerald-500 ring-offset-1' : ''
+              }`}
+              title={pulse ? 'Kuruluma buradan devam et' : 'Admin paneli'}
             >
               Admin
             </Link>

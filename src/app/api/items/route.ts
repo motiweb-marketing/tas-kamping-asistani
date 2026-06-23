@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { assertNoDuplicateItem } from '@/lib/item-duplicates';
 import { enrichItemWithClaims, normalizeClaims } from '@/lib/item-claims';
 import { ensureCampaignRecommendations } from '@/lib/recommendations';
+import { ensureListSections } from '@/lib/list-sections';
 import { syncAllListQuantities } from '@/lib/sync-ai-list-quantities';
 import { getSession } from '@/lib/session';
 import { createServerClient } from '@/lib/supabase/server';
@@ -44,6 +45,9 @@ export async function GET(request: NextRequest) {
 
   try {
     await ensureCampaignRecommendations(supabase, campaignId);
+    if (scope && scope !== 'all') {
+      await ensureListSections(supabase, campaignId, [scope]);
+    }
     if (scope === 'shared' || !scope || scope === 'all') {
       await syncAllListQuantities(supabase, campaignId);
     }
@@ -56,7 +60,8 @@ export async function GET(request: NextRequest) {
     .select(`
       *,
       added_by_user:users!added_by(id, name),
-      assigned_tent:tents!assigned_tent_id(id, name)
+      assigned_tent:tents!assigned_tent_id(id, name),
+      list_section:list_sections!section_id(id, name, sort_order)
     `)
     .eq('campaign_id', campaignId)
     .order('is_standard', { ascending: false })
@@ -155,6 +160,7 @@ export async function POST(request: NextRequest) {
     notes = '',
     needed_count = 1,
     disposition = 'consumable',
+    section_id,
   } = body;
 
   if (!name) {
@@ -181,6 +187,12 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: duplicate.error }, { status: 409 });
   }
 
+  let resolvedSectionId = section_id || null;
+  if (!resolvedSectionId && session.user.role === 'admin') {
+    const { getOrCreateDefaultSection } = await import('@/lib/list-sections');
+    resolvedSectionId = await getOrCreateDefaultSection(supabase, session.user.campaign_id, scope);
+  }
+
   const { data: item, error } = await supabase
     .from('items')
     .insert({
@@ -193,6 +205,7 @@ export async function POST(request: NextRequest) {
       list_scope,
       disposition,
       notes: notes || null,
+      section_id: resolvedSectionId,
       is_extra: list_scope === 'shared' && !is_recommendation,
       is_published: isAdminRecommendation || list_scope === 'shared',
       is_recommendation: !!is_recommendation,

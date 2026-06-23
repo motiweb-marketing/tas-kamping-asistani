@@ -28,7 +28,9 @@ export default function StepFrame({
           </span>
         )}
         <h2 className="font-display text-lg font-bold text-forest-950 sm:text-xl">{title}</h2>
-        <p className="mt-1 text-sm leading-relaxed text-forest-600">{description}</p>
+        {description ? (
+          <p className="mt-1 text-sm leading-relaxed text-forest-600">{description}</p>
+        ) : null}
         {bullets && bullets.length > 0 && (
           <ul className="mt-3 space-y-1.5 text-sm text-forest-700">
             {bullets.map((b) => (

@@ -70,7 +70,7 @@ export default function SetupPage() {
       return;
     }
 
-    router.push('/admin/kurulum?welcome=1');
+    router.push('/home?leader=1');
     router.refresh();
   }
 
@@ -191,8 +191,8 @@ export default function SetupPage() {
 
         <p className="mt-6 text-center text-xs text-forest-500">
           Zaten hesabınız var mı?{' '}
-          <Link href="/login/admin" className="font-semibold text-forest-700 underline hover:text-forest-900">
-            Organizatör girişi
+          <Link href="/login" className="font-semibold text-forest-700 underline hover:text-forest-900">
+            Giriş yap
           </Link>
         </p>
       </AuthCard>

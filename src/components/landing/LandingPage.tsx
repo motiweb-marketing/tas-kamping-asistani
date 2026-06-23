@@ -597,8 +597,7 @@ export default function LandingPage() {
               <h4 className="text-[10px] font-bold uppercase tracking-wider text-sand-100">Hızlı linkler</h4>
               <ul className="space-y-1.5">
                 <li><Link href="/setup" className="hover:text-white">Ücretsiz dene</Link></li>
-                <li><Link href="/login" className="hover:text-white">Çadıra giriş</Link></li>
-                <li><Link href="/login/admin" className="hover:text-white">Organizatör girişi</Link></li>
+                <li><Link href="/login" className="hover:text-white">Giriş yap</Link></li>
               </ul>
             </div>
             <div className="space-y-2.5">

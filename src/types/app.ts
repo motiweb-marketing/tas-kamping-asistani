@@ -36,6 +36,7 @@ export interface ItemClaimWithTent {
 export interface ItemWithRelations extends Item {
   added_by_user?: Pick<SafeUser, 'id' | 'name'> | null;
   assigned_tent?: Pick<Tent, 'id' | 'name'> | null;
+  list_section?: { id: string; name: string; sort_order?: number } | null;
   claims?: ItemClaimWithTent[];
   claimed_total?: number;
   remaining_count?: number;

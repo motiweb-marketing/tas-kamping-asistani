@@ -83,6 +83,7 @@ async function main() {
     '012_platform_admin.sql',
     '013_platform_settings.sql',
     '014_list_generation_scaling.sql',
+    '015_list_sections.sql',
   ];
 
   for (const file of files) {

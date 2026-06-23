@@ -2,8 +2,10 @@ import AppHeader from '@/components/layout/AppHeader';
 import BottomNav from '@/components/layout/BottomNav';
 import InstallPrompt from '@/components/layout/InstallPrompt';
 import FirstVisitTour from '@/components/onboarding/FirstVisitTour';
+import LeaderHomeWelcome from '@/components/onboarding/LeaderHomeWelcome';
 import { getSession } from '@/lib/session';
 import { redirect } from 'next/navigation';
+import { Suspense } from 'react';
 
 export const dynamic = 'force-dynamic';
 
@@ -25,6 +27,11 @@ export default async function AppLayout({
       />
       <main className="p-4 sm:p-5">
         <InstallPrompt />
+        {session.user?.role === 'admin' && (
+          <Suspense fallback={null}>
+            <LeaderHomeWelcome />
+          </Suspense>
+        )}
         {session.user?.role !== 'admin' && <FirstVisitTour />}
         {children}
       </main>
