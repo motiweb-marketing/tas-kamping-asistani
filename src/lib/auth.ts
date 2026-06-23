@@ -11,7 +11,11 @@ export async function verifyPassword(
   password: string,
   hash: string
 ): Promise<boolean> {
-  return bcrypt.compare(password, hash);
+  if (!hash || !password) return false;
+  const trimmed = password.trim();
+  if (!trimmed) return false;
+  if (!hash.startsWith('$2')) return false;
+  return bcrypt.compare(trimmed, hash);
 }
 
 export function toSafeUser(user: User): SafeUser {

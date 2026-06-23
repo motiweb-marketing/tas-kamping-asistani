@@ -51,7 +51,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Geçerli bir kullanıcı adı girin' }, { status: 400 });
   }
 
-  const password_hash = await hashPassword(password);
+  const password_hash = await hashPassword(String(password).trim());
   const supabase = createServerClient();
   const campaignId = session.user.campaign_id;
 

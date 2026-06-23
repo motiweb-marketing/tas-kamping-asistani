@@ -58,6 +58,7 @@ function TentLoginForm() {
       body: JSON.stringify({
         username,
         password,
+        redirect,
         ...(campaignId || kampId ? { campaign_id: campaignId || kampId } : {}),
       }),
     });
@@ -166,7 +167,7 @@ export default function LoginPage() {
     <AuthShell backHref="/" backLabel="Ana sayfaya dön">
       <AuthCard
         title="Çadıra giriş yap"
-        subtitle="Organizatörün size verdiği kullanıcı adı ve şifre ile giriş yapın."
+        subtitle="Organizatörün verdiği kullanıcı adı ve şifre ile girin. @ yazmayın (ör. okacara, askacar)."
         footer={
           <p className="text-center text-sm text-forest-600">
             Organizatör müsünüz? Aynı form ile giriş yapabilirsiniz.{' '}

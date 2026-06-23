@@ -1,13 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyPassword, toSessionUser } from '@/lib/auth';
-import { normalizeUsername } from '@/lib/user-validation';
+import { findUsersForLogin } from '@/lib/user-validation';
 import { getSession } from '@/lib/session';
 import { createServerClient } from '@/lib/supabase/server';
 import type { User } from '@/types';
-
-function redirectForRole(_role: string): string {
-  return '/home';
-}
 
 interface CampaignPick {
   id: string;
@@ -20,7 +16,44 @@ type UserRow = User & {
   campaigns: { id: string; name: string; start_date: string; end_date: string } | null;
 };
 
-async function completeLogin(user: UserRow) {
+function redirectAfterLogin(role: string, requested?: string): string {
+  const redirect =
+    requested &&
+    requested.startsWith('/') &&
+    !requested.startsWith('//') &&
+    !requested.startsWith('/login')
+      ? requested
+      : null;
+
+  if (redirect) {
+    if (redirect.startsWith('/admin') && role !== 'admin') return '/home';
+    return redirect;
+  }
+
+  return role === 'admin' ? '/admin' : '/home';
+}
+
+async function attachCampaigns(
+  supabase: ReturnType<typeof createServerClient>,
+  users: User[]
+): Promise<UserRow[]> {
+  const ids = Array.from(new Set(users.map((u) => u.campaign_id).filter(Boolean)));
+  if (!ids.length) return users.map((u) => ({ ...u, campaigns: null }));
+
+  const { data: campaigns } = await supabase
+    .from('campaigns')
+    .select('id, name, start_date, end_date')
+    .in('id', ids);
+
+  const byId = new Map((campaigns || []).map((c) => [c.id, c]));
+
+  return users.map((u) => ({
+    ...u,
+    campaigns: byId.get(u.campaign_id) || null,
+  }));
+}
+
+async function completeLogin(user: UserRow, redirect?: string) {
   const supabase = createServerClient();
 
   await supabase
@@ -37,45 +70,37 @@ async function completeLogin(user: UserRow) {
   const { password_hash: _, campaigns: __, ...safeUser } = user;
   return NextResponse.json({
     user: safeUser,
-    redirectTo: redirectForRole(user.role),
+    redirectTo: redirectAfterLogin(user.role, redirect),
   });
 }
 
 export async function POST(request: NextRequest) {
   try {
-    const { username, password, campaign_id } = await request.json();
+    const { username, password, campaign_id, redirect } = await request.json();
 
     if (!username || !password) {
       return NextResponse.json({ error: 'Kullanıcı adı ve şifre gerekli' }, { status: 400 });
     }
 
-    const loginUsername = normalizeUsername(String(username));
     const passwordInput = String(password).trim();
-    if (!loginUsername || !passwordInput) {
+    if (!passwordInput) {
       return NextResponse.json({ error: 'Kullanıcı adı ve şifre gerekli' }, { status: 400 });
     }
 
     const supabase = createServerClient();
+    const matchedUsers = await findUsersForLogin(supabase, String(username));
 
-    const { data: rawUsers, error } = await supabase
-      .from('users')
-      .select(
-        `
-        *,
-        campaigns!inner(id, name, start_date, end_date)
-      `
-      )
-      .or(`username.ilike.${loginUsername},username.ilike.@${loginUsername}`);
-
-    const users = (rawUsers || []).filter(
-      (u) => normalizeUsername(u.username) === loginUsername
-    );
-
-    if (error || !users.length) {
+    if (!matchedUsers.length) {
       return NextResponse.json({ error: 'Kullanıcı adı veya şifre hatalı' }, { status: 401 });
     }
 
-    const rows = users as UserRow[];
+    const rows = (await attachCampaigns(supabase, matchedUsers)).filter((u) => u.campaigns);
+
+    if (!rows.length) {
+      return NextResponse.json({ error: 'Kullanıcı adı veya şifre hatalı' }, { status: 401 });
+    }
+
+    const redirectTo = typeof redirect === 'string' ? redirect : undefined;
 
     if (campaign_id) {
       const matched = rows.find((u) => u.campaign_id === campaign_id);
@@ -86,7 +111,7 @@ export async function POST(request: NextRequest) {
       if (!valid) {
         return NextResponse.json({ error: 'Kullanıcı adı veya şifre hatalı' }, { status: 401 });
       }
-      return completeLogin(matched);
+      return completeLogin(matched, redirectTo);
     }
 
     const passwordMatches: UserRow[] = [];
@@ -101,7 +126,7 @@ export async function POST(request: NextRequest) {
     }
 
     if (passwordMatches.length === 1) {
-      return completeLogin(passwordMatches[0]);
+      return completeLogin(passwordMatches[0], redirectTo);
     }
 
     const pickCampaign: CampaignPick[] = passwordMatches.map((u) => ({

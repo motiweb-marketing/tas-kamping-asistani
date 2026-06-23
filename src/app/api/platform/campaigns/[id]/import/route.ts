@@ -127,7 +127,7 @@ export async function POST(
       continue;
     }
 
-    const password_hash = await hashPassword(row.password);
+    const password_hash = await hashPassword(String(row.password).trim());
     const { error: insErr } = await supabase.from('users').insert({
       campaign_id: campaignId,
       tent_id: tent.id,
